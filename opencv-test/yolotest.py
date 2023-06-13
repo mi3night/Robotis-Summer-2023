@@ -3,7 +3,7 @@ import numpy
 
 model = YOLO("yolov8n.pt", "v8")
 
-detection_output = model.predict(source = "opencv-test/TestImage/img0.JPG", conf = 0.25, save = False)
+detection_output = model.predict(source = "opencv-test/TestImage/img1.JPG", conf = 0.25, save = True)
 
 print(detection_output)
 
