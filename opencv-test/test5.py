@@ -49,13 +49,15 @@ def aruco_display(corners, ids, rejected, image):
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             
-            cv2.putText(image, str(markerID),(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                0.5, (0, 255, 0), 2)
-            
             # Calculate distance
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
             distance = calculate_distance(marker_size)
             print("[Inference] ArUco marker ID: {}, Distance: {} units".format(markerID, distance))
+
+            outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " units"
+
+            cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                0.5, (0, 255, 0), 2)
             
     return image
 
