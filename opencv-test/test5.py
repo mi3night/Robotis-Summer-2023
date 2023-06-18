@@ -54,7 +54,7 @@ def aruco_display(corners, ids, rejected, image):
             distance = calculate_distance(marker_size)
             print("[Inference] ArUco marker ID: {}, Distance: {} units".format(markerID, distance))
 
-            outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " units"
+            outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " feet"
 
             cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 0, 255), 2)
@@ -80,7 +80,7 @@ aruco_type = "DICT_5X5_100"
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
