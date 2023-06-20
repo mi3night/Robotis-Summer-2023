@@ -44,15 +44,19 @@ def aruco_display(corners, ids, rejected, image):
             cv2.line(image, topRight, bottomRight, (255, 0, 255), 2)
             cv2.line(image, bottomRight, bottomLeft, (255, 0, 255), 2)
             cv2.line(image, bottomLeft, topLeft, (255, 0, 255), 2)
-            
+
+            #Object's center pixel coordinates
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
-            
+            objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
+            cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
+            print("At pixel coordinates ({}, {})".format(cX,cY))
+
             # Calculate distance
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
             distance = calculate_distance(marker_size)
-            print("[Inference] ArUco marker ID: {}, Distance: {} units".format(markerID, distance))
+            print("[Inference] ArUco marker ID: {}, Distance: {} units\n".format(markerID, distance))
 
             outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " feet"
 
