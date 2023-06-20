@@ -96,7 +96,7 @@ while cap.isOpened():
     height = int(width*(h/w))
     img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
 
-    #To find frame's center pixel, then comment or remove, because this is fixed
+    #Frame's center pixel
     h,w,_ = img.shape
     fX=int(w/2)
     fY=int(h/2)
