@@ -95,7 +95,14 @@ while cap.isOpened():
     width = 1000
     height = int(width*(h/w))
     img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
- 
+
+    #To find frame's center pixel, then comment or remove, because this is fixed
+    h,w,_ = img.shape
+    fX=int(w/2)
+    fY=int(h/2)
+    cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
+    cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    
     corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
 
     detected_markers = aruco_display(corners, ids, rejected, img)
