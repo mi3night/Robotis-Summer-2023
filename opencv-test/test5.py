@@ -70,7 +70,7 @@ def calculate_distance(marker_size):
     # Constants for your specific camera setup
     # You need to calibrate these values for your camera
     marker_size_at_one_meter = 0.3332371  # Adjust this value based on the actual marker size at 1 meter distance
-    focal_length = 100  # Focal length of your camera in pixels
+    focal_length = 226.5  # Focal length of your camera in pixels
     
     # Convert meters to feet
     distance_in_feet = marker_size_at_one_meter * focal_length / marker_size * 3.28084
