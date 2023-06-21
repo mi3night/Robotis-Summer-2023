@@ -53,6 +53,15 @@ def aruco_display(corners, ids, rejected, image):
             cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
             print("At pixel coordinates ({}, {})".format(cX,cY))
 
+            #Frame center pixel
+            h,w,_ = img.shape
+            fX=int(w/2)
+            fY=int(h/2)
+            cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
+            cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            #Line b/w center and object
+            cv2.line(image, (fX,fY), (cX,cY), (255, 0, 0), 2)
+            
             # Calculate distance
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
             distance = calculate_distance(marker_size)
@@ -95,13 +104,6 @@ while cap.isOpened():
     width = 1000
     height = int(width*(h/w))
     img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
-
-    #Frame's center pixel
-    h,w,_ = img.shape
-    fX=int(w/2)
-    fY=int(h/2)
-    cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
-    cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     
     corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
 
