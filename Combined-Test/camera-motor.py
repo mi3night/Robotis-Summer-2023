@@ -55,27 +55,28 @@ def aruco_display(corners, ids, rejected, image):
 
             # Calculate distance
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
-            distance = calculate_distance(marker_size)
-            print("[Inference] ArUco marker ID: {}, Distance: {} units\n".format(markerID, distance))
+            distance_feet, distance_per_pixel = calculate_distance(marker_size)
+            distance_feet_rounded = round(distance_feet, 2)
+            distance_per_pixel_rounded = round(distance_per_pixel, 6)
+            print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded))
 
-            outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " feet"
+            outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " + str(distance_per_pixel_rounded) + " feet/pixel"
 
             cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 0, 255), 2)
-            
     return image
 
 
 def calculate_distance(marker_size):
     # Constants for your specific camera setup
     # You need to calibrate these values for your camera
-    marker_size_at_one_meter = 0.3332371  # Adjust this value based on the actual marker size at 1 meter distance
-    focal_length = 226.5  # Focal length of your camera in pixels
+    marker_size_at_one_meter = 0.1055  # Adjust this value based on the actual marker size at 1 meter distance
+    focal_length = 226  # Focal length of your camera in pixels
     
     # Convert meters to feet
     distance_in_feet = marker_size_at_one_meter * focal_length / marker_size * 3.28084
-    return distance_in_feet
-
+    distance_per_pixel = distance_in_feet / focal_length
+    return distance_in_feet, distance_per_pixel
 
 
 
