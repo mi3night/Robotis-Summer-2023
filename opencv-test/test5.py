@@ -62,17 +62,18 @@ def aruco_display(corners, ids, rejected, image):
             distance_feet, distance_per_pixel = calculate_distance(marker_size)
             distance_feet_rounded = round(distance_feet, 2)
             distance_per_pixel_rounded = round(distance_per_pixel, 6)
-            arX = distance_per_pixel * (cX - fX) / 12
+            arX = distance_per_pixel * (cX - fX) / 3.6
             arY = distance_feet_rounded
             arX = round(arX, 4)
             arY = round(arY, 4)
             print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
-
-            outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " feet/pixel"
-            outlineText += "\nX coord: " + str(arX) + "ft, Y coord: " + str(arY) + "ft"
+            outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
+            outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
+            
 
             cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 0, 255), 2)
+            cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
     return image
 
 
