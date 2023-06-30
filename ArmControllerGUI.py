@@ -90,6 +90,27 @@ def calculate_distance(marker_size):
     distance_in_feet = marker_size_at_one_meter * focal_length / marker_size * 3.28084
     return distance_in_feet
 
+class CustomButton(QPushButton):
+    def __init__(self, text):
+        super().__init__(text)
+
+        # Set the button style
+        self.setStyleSheet("""
+            QPushButton {
+                background-color: Green;
+                border: none;
+                color: #ffffff;
+                border-radius: 10px;
+                padding: 10px;
+                text-align: center;
+            }
+            QPushButton:hover {
+                background-color: #ff3333;
+            }
+            QPushButton:pressed {
+                background-color: #cc0000;
+            }
+        """)
 
 class VideoPlayer(QWidget):
     def __init__(self):
@@ -116,9 +137,9 @@ class VideoPlayer(QWidget):
         self.textbox2.setMaximumWidth(200)
         self.textbox3.setMaximumWidth(200)
 
-        # Create a QPushButton
-        self.button = QPushButton("Input Coordinates", self)
-        self.button.clicked.connect(self.run_method)
+        # Create a Input Coordinate button
+        self.button = CustomButton("Input Coordinates")
+        self.button.clicked.connect(self.Input_Coord)
 
         # Create an exit button
         self.exit_button = QPushButton("Exit", self)
@@ -192,7 +213,7 @@ class VideoPlayer(QWidget):
         # Call the play method again after 15 milliseconds (change the delay as needed)
         QTimer.singleShot(15, self.play)
 
-    def run_method(self):
+    def Input_Coord(self):
         # This method will be called when the button is clicked
         # It reads the text from the text boxes
         text1 = self.textbox1.text()
