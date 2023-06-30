@@ -54,11 +54,11 @@ def aruco_display(corners, ids, rejected, image):
             print("At pixel coordinates ({}, {})".format(cX,cY))
 
             #Frame center pixel
-            h,w,_ = img.shape
+            h,w,_ = image.shape
             fX=int(w/2)
             fY=int(h/2)
-            cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
-            cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.circle(image, (fX,fY), 3, (255, 0, 0), -1)
+            cv2.putText(image," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             #Line b/w center and object
             cv2.line(image, (fX,fY), (cX,cY), (255, 0, 0), 2)
             
