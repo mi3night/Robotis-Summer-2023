@@ -1,27 +1,7 @@
-import math
-import motorctrl_v1 as motor
-import Movement_Calc_v2 as calculation
 import numpy as np
 import time
 import cv2
 
-
-BASE_ID = 1
-BICEP_ID = 2
-FOREARM_ID = 3
-WRIST_ID = 4
-CLAW_ID = 0
-
-PORT_NUM = 'COM5'
-BAUDRATE = 1000000
-
-MOVEARM_MODE = 1
-
-ALL_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
-MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID]
-
-frameX = 0
-objX = 0
 
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -67,13 +47,9 @@ def aruco_display(corners, ids, rejected, image):
 
             #Object's center pixel coordinates    
             h,w,_ = img.shape
-            global objX
-            global frameX
             fX=int(w/2)
-            frameX = fX
             fY=int(h/2)
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
-            objX = cX
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
@@ -120,117 +96,34 @@ aruco_type = "DICT_5X5_100"
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
-# while cap.isOpened():
-#     ret, img = cap.read()
+while cap.isOpened():
+    ret, img = cap.read()
 
-#     h, w, _ = img.shape
-#     width = 1000
-#     height = int(width*(h/w))
-#     img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
+    h, w, _ = img.shape
+    width = 1000
+    height = int(width*(h/w))
+    img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
 
-#     #Frame's center pixel
-#     h,w,_ = img.shape
-#     frameX = int(w/2)
-#     fX=int(w/2)
-#     fY=int(h/2)
-#     cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
-#     cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+    #Frame's center pixel
+    h,w,_ = img.shape
+    fX=int(w/2)
+    fY=int(h/2)
+    cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
+    cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     
-#     corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
+    corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
 
-#     detected_markers = aruco_display(corners, ids, rejected, img)
+    detected_markers = aruco_display(corners, ids, rejected, img)
 
-#     cv2.imshow("Image", detected_markers)
+    cv2.imshow("Image", detected_markers)
 
-#     key = cv2.waitKey(1) & 0xFF
-#     if key == ord("q"):
-#         break
-
-# cv2.destroyAllWindows()
-# cap.release()
-
-
-# if __name__ == "__main__":
-motor.portInitialization(PORT_NUM, [1])
-while (MOVEARM_MODE):
-        while cap.isOpened():
-#         x = int(input("Enter the goal X coordinate for the arm: "))
-#         y = int(input("Enter the goal Y coordinate for the arm: "))
-#         z = int(input("Enter the goal Z coordinate for the arm: "))
-#         print("""
-#         [0] CLAW PARALLEL TO GROUND
-#         [1] CLAW PERPENDICULAR TO GROUND
-#         [2] CLAW 45 DEGREE TO GROUND
-#         """)
-#         forearm_mode = int(input("Enter '0', '1', or '2' for forearm mode: "))
-
-#         claw_angle =  int(input("Enter the mode for the claw [0] to open and [1] to close: "))
-
-
-#         if (claw_angle == 0):
-#             motor.motorRunWithInputs([90], [0])
-#         else:
-#             motor.motorRunWithInputs([180], [0])
-
-#         coor = [x,y,z]
-#         angles = calculation.angle_Calc(coor, forearm_mode)
-#         print(angles)
-        
-#         motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
-#         motor.simMotorRun(angles, MOVE_IDs)
-
-
-#         # motor.motorRunWithInputs([180], [0])
-#         # motor.motorRunWithInputs([225], [0])
-
-
-            ret, img = cap.read()
-
-            h, w, _ = img.shape
-            width = 1000
-            height = int(width*(h/w))
-            img = cv2.resize(img, (width, height), interpolation=cv2.INTER_CUBIC)
-
-            #Frame's center pixel
-            h,w,_ = img.shape
-            # frameX = int(w/2)
-            fX=int(w/2)
-            fY=int(h/2)
-            cv2.circle(img, (fX,fY), 3, (255, 0, 0), -1)
-            cv2.putText(img," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            
-            corners, ids, rejected = cv2.aruco.detectMarkers(img, arucoDict, parameters=arucoParams)
-
-            detected_markers = aruco_display(corners, ids, rejected, img)
-
-            cv2.imshow("Image", detected_markers)
-
-            # mode = input("Enter 'Y' to continue arm movement. Else, press any key: ")
-            # if (mode != 'Y'):
-            #     MOVEARM_MODE = 0
-            #     motor.portTermination()
-            if(abs(objX - frameX) > 50):
-                 difference = objX - frameX
-                 print('difference: ' + str(difference))
-                 current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                 print("current: " + str(current))
-                 if (difference > 0):
-                    # motor.WriteMotorData(1, 116, current - 10)
-                    # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                    motor.motorRunWithInputs([current - 3], [1])
-                 else:
-                    motor.motorRunWithInputs([current + 3], [1])
-
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord("q"):
-                break
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
         break
 
 cv2.destroyAllWindows()
 cap.release()
-
-#     #this is the new update for the new github        

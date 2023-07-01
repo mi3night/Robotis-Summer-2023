@@ -177,6 +177,7 @@ def simMotorRun(angle_inputs, dxlIDs):
     movementStatus = [1] * idNum
 
     #Format is [base, bicep, forearm, wrist, claw]
+    print('angle inputs: ' + str(angle_inputs))
     if (len(angle_inputs) == idNum):
         dxl_goal_angle = angle_inputs
         dxl_goal_inputs = [0] * idNum

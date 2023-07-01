@@ -9,7 +9,7 @@ FOREARM_ID = 3
 WRIST_ID = 4
 CLAW_ID = 0
 
-PORT_NUM = 'COM3'
+PORT_NUM = 'COM5'
 BAUDRATE = 1000000
 
 MOVEARM_MODE = 1
@@ -28,8 +28,6 @@ if __name__ == "__main__":
         [1] CLAW PERPENDICULAR TO GROUND
         [2] CLAW 45 DEGREE TO GROUND
         """)
-        forearm_mode = int(input("Enter '0', '1', or '2' for forearm mode: "))
-
         claw_angle =  int(input("Enter the mode for the claw [0] to open and [1] to close: "))
 
 
@@ -38,14 +36,15 @@ if __name__ == "__main__":
         else:
             motor.motorRunWithInputs([180], [0])
 
-        coor = [x,y,z]
-        angles = calculation.angle_Calc(coor, forearm_mode)
+        coor = [x,y,z] 
+        angles = calculation.angle_Calc(coor, 0)
         print(angles)
         
         motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
         motor.simMotorRun(angles, MOVE_IDs)
 
-
+        print(motor.ReadMotorData(1,132))
+        # print(motor.ReadMotorData(1,132))
         # motor.motorRunWithInputs([180], [0])
         # motor.motorRunWithInputs([225], [0])
 
