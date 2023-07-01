@@ -213,7 +213,7 @@ while (MOVEARM_MODE):
             # if (mode != 'Y'):
             #     MOVEARM_MODE = 0
             #     motor.portTermination()
-            if(abs(objX - frameX) > 50):
+            if(abs(objX - frameX) > 30):
                  difference = objX - frameX
                  print('difference: ' + str(difference))
                  current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
@@ -221,9 +221,9 @@ while (MOVEARM_MODE):
                  if (difference > 0):
                     # motor.WriteMotorData(1, 116, current - 10)
                     # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                    motor.motorRunWithInputs([current - 3], [1])
+                    motor.motorRunWithInputs([current - 1], [1])
                  else:
-                    motor.motorRunWithInputs([current + 3], [1])
+                    motor.motorRunWithInputs([current + 1], [1])
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
