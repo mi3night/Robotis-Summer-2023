@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtGui import QImage, QPixmap, QFont
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout
 
 ARUCO_DICT = {
@@ -127,19 +127,46 @@ class VideoPlayer(QWidget):
         self.textbox2 = QLineEdit(self)
         self.textbox3 = QLineEdit(self)
 
-        # Create QLabel widgets for the text box labels
-        label1 = QLabel("X:")
-        label2 = QLabel("Y:")
-        label3 = QLabel("Z:")
-
         # Set the maximum width for the text boxes
         self.textbox1.setMaximumWidth(200)
         self.textbox2.setMaximumWidth(200)
         self.textbox3.setMaximumWidth(200)
 
-        # Create a Input Coordinate button
-        self.button = CustomButton("Input Coordinates")
-        self.button.clicked.connect(self.Input_Coord)
+        # Create QLabel widgets for the text box labels
+        label1 = QLabel("X:")
+        label2 = QLabel("Y:")
+        label3 = QLabel("Z:")
+
+        #ROBOTIS Logo
+        logo = QLabel("ROBOTIS")
+        font = QFont()
+        font.setFamily("Roboto")
+        font.setPointSize(50)
+        font.setBold(True)
+        logo.setFont(font)
+
+        # Create a Method buttons
+        self.XYZ_button = CustomButton("Input Coordinates")
+        self.XYZ_button.clicked.connect(self.Input_Coord)
+
+        self.Stop_button = CustomButton("Force stop")
+        self.Stop_button.setMaximumWidth(200)
+        #self.button.clicked.connect(self.Input_Coord)
+
+        self.R_button = CustomButton("Reset")
+        self.R_button.setMaximumWidth(200)
+        #self.button.clicked.connect(self.Input_Coord)
+
+        self.Dist_button = CustomButton("Show Distance")
+        #self.button.clicked.connect(self.Input_Coord)
+        
+        self.Cont_button = CustomButton("Show Contour")
+        #self.button.clicked.connect(self.Input_Coord)
+
+        self.Mode_button = CustomButton("Mode")
+        #self.button.clicked.connect(self.Input_Coord)
+    
+
 
         # Create an exit button
         self.exit_button = QPushButton("Exit", self)
@@ -155,23 +182,45 @@ class VideoPlayer(QWidget):
         layout2.addWidget(self.textbox2)
 
         layout3 = QHBoxLayout()
+        layout3.setSpacing(10)  # Set the spacing between items to 5 pixels
         layout3.addWidget(label3)
         layout3.addWidget(self.textbox3)
 
-        # Create a QVBoxLayout to arrange the widgets
-        main_layout = QVBoxLayout()
+        # Right side Vertical Layout
+        R_v_layout = QVBoxLayout()
+        R_v_layout.addStretch()
+        R_v_layout.setSpacing(10)  # Set the spacing between items to 5 pixels
+        R_v_layout.setContentsMargins(0, 0, 0, 0)
+        #R_v_layout.addWid
+        R_v_layout.addLayout(layout1)
+        R_v_layout.addLayout(layout2)
+        R_v_layout.addLayout(layout3)
+        R_v_layout.addWidget(self.XYZ_button)
+        R_v_layout.addWidget(self.exit_button)
+
+        #Left side Vertical Layout
+        L_v_layout = QVBoxLayout()
+        L_v_layout.addStretch()
+        L_v_layout.setSpacing(10)
+        L_v_layout.setContentsMargins(0,0,0,0)
+        L_v_layout.addWidget(self.Stop_button)
+        L_v_layout.addWidget(self.R_button)
+        L_v_layout.addWidget(logo)
+        
+
+        
+        # Main layout
+        main_layout = QHBoxLayout()
+        main_layout.addStretch()
+        main_layout.setSpacing(50)  # Set the spacing between items to 5 pixels
+        main_layout.addLayout(L_v_layout)
         main_layout.addWidget(self.video_label)
-        main_layout.addLayout(layout1)
-        main_layout.addLayout(layout2)
-        main_layout.addLayout(layout3)
-        main_layout.addWidget(self.button)
-        main_layout.addWidget(self.exit_button)
-
+        main_layout.addLayout(R_v_layout)
+        
+       
         # Set the main layout for the widget
+        
         self.setLayout(main_layout)
-
-        # Set a flag to track whether the Enter key was pressed
-        self.enter_pressed = False
 
         # Open the video source
         self.capture = cv2.VideoCapture(0)
