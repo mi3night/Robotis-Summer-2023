@@ -1,8 +1,12 @@
 import cv2
 import numpy as np
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QImage, QPixmap, QFont
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout
+import os
+from PyQt5.QtCore import Qt, QTimer, QRect
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTextEdit, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
+
+#Filepath for images, change for your setup
+os.chdir(r'cv2\GUI')
 
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -116,7 +120,7 @@ class VideoPlayer(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
-        self.setGeometry(100, 100, 800, 800)  # Set the window size to 800x800 pixels
+        self.setGeometry(50, 50, 1200, 800)  # Set the window size to 800x800 pixels
 
         # Create a QLabel to display the video feed
         self.video_label = QLabel(self)
@@ -128,99 +132,164 @@ class VideoPlayer(QWidget):
         self.textbox3 = QLineEdit(self)
 
         # Set the maximum width for the text boxes
-        self.textbox1.setMaximumWidth(200)
-        self.textbox2.setMaximumWidth(200)
-        self.textbox3.setMaximumWidth(200)
+        self.textbox1.setFixedWidth(100)
+        self.textbox2.setFixedWidth(100)
+        self.textbox3.setFixedWidth(100)
 
         # Create QLabel widgets for the text box labels
         label1 = QLabel("X:")
         label2 = QLabel("Y:")
         label3 = QLabel("Z:")
 
-        #ROBOTIS Logo
-        logo = QLabel("ROBOTIS")
-        font = QFont()
-        font.setFamily("Roboto")
-        font.setPointSize(50)
-        font.setBold(True)
-        logo.setFont(font)
+        #ROBOTIS logo
+        self.rimage = QPixmap("ROBOTIS.png")
+        self.ROBOTIS = QLabel()
+        self.ROBOTIS.setPixmap(self.rimage)
+        self.ROBOTIS.setAlignment(Qt.AlignBottom)
 
         # Create a Method buttons
         self.XYZ_button = CustomButton("Input Coordinates")
+        self.XYZ_button.setFixedWidth(200)
         self.XYZ_button.clicked.connect(self.Input_Coord)
+        
 
         self.Stop_button = CustomButton("Force stop")
-        self.Stop_button.setMaximumWidth(200)
+        self.Stop_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
 
         self.R_button = CustomButton("Reset")
-        self.R_button.setMaximumWidth(200)
+        self.R_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
 
         self.Dist_button = CustomButton("Show Distance")
+        self.Dist_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
         
         self.Cont_button = CustomButton("Show Contour")
+        self.Cont_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
 
         self.Mode_button = CustomButton("Mode")
+        self.Mode_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
     
-
-
-        # Create an exit button
         self.exit_button = QPushButton("Exit", self)
+        self.exit_button.setFixedWidth(200)
         self.exit_button.clicked.connect(self.close)
+
+        #arrow buttons
+        #up
+        toggle_up = QPushButton(self)
+        toggle_up.setFixedWidth(50)
+        toggle_up.setFixedWidth(50)
+        toggle_up.setIcon(QIcon("uparrow.png"))
+        #toggle_up.clicked.connect(self.move_up)
+        #down
+        toggle_down = QPushButton(self)
+        toggle_down.setFixedWidth(50)
+        toggle_down.setFixedWidth(50)
+        toggle_down.setIcon(QIcon("downarrow.png"))
+        #toggle_down.clicked.connect(self.move_down)
+        #right
+        toggle_right = QPushButton(self)
+        toggle_right.setFixedWidth(50)
+        toggle_right.setFixedWidth(50)
+        toggle_right.setIcon(QIcon("rightarrow.png"))
+        #toggle_right.clicked.connect(self.move_right)
+        #left
+        toggle_left = QPushButton(self)
+        toggle_left.setFixedWidth(50)
+        toggle_left.setFixedWidth(50)
+        toggle_left.setIcon(QIcon("leftarrow.png"))
+        #toggle_left.clicked.connect(self.move_left)
+
+
+        button_grid = QGridLayout()
+        button_grid.addWidget(toggle_up, 0,1)
+        button_grid.addWidget(toggle_down, 3,1)
+        button_grid.addWidget(toggle_right, 2,2)
+        button_grid.addWidget(toggle_left, 2,0)
+        button_grid.setSpacing(2)
+
 
         # Create a QHBoxLayout for each label and textbox pair
         layout1 = QHBoxLayout()
+        layout1.setSpacing(5)
         layout1.addWidget(label1)
         layout1.addWidget(self.textbox1)
+        layout1.setAlignment(label1, Qt.AlignRight)  # Align label1 to the right
 
         layout2 = QHBoxLayout()
+        layout2.setSpacing(5)
         layout2.addWidget(label2)
         layout2.addWidget(self.textbox2)
+        layout2.setAlignment(label2, Qt.AlignRight)  # Align label2 to the right
 
         layout3 = QHBoxLayout()
-        layout3.setSpacing(10)  # Set the spacing between items to 5 pixels
+        layout3.setSpacing(5)
         layout3.addWidget(label3)
         layout3.addWidget(self.textbox3)
+        layout3.setAlignment(label3, Qt.AlignRight)  # Align label3 to the right
+
+        # Output terminal
+        label4 = QLabel("Output Terminal:")
+        self.output_terminal = QPlainTextEdit()
+        self.output_terminal.setReadOnly(True)
+        self.output_terminal.setGeometry(QRect(10, 90, 331, 111))
+        self.output_terminal.setFont(QFont("DejaVu Sans Mono", 8))
+        self.output_terminal.setStyleSheet("color: white;"
+                                            "background-color: black;"
+                                            "selection-color: black;"
+                                            "selection-background-color: white;")
+        self.output_terminal.setMaximumWidth(800)
 
         # Right side Vertical Layout
         R_v_layout = QVBoxLayout()
         R_v_layout.addStretch()
-        R_v_layout.setSpacing(10)  # Set the spacing between items to 5 pixels
-        R_v_layout.setContentsMargins(0, 0, 0, 0)
-        #R_v_layout.addWid
+        R_v_layout.setSpacing(10)  # Set the spacing between items to 10 pixels
+        R_v_layout.addWidget(self.Dist_button)
+        R_v_layout.addWidget(self.Cont_button)
+        R_v_layout.addWidget(self.Mode_button)
         R_v_layout.addLayout(layout1)
         R_v_layout.addLayout(layout2)
         R_v_layout.addLayout(layout3)
         R_v_layout.addWidget(self.XYZ_button)
+        R_v_layout.addLayout(button_grid)
         R_v_layout.addWidget(self.exit_button)
 
-        #Left side Vertical Layout
+        # Left side Vertical Layout
         L_v_layout = QVBoxLayout()
         L_v_layout.addStretch()
         L_v_layout.setSpacing(10)
-        L_v_layout.setContentsMargins(0,0,0,0)
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
-        L_v_layout.addWidget(logo)
-        
+        L_v_layout.addWidget(self.ROBOTIS)
 
-        
-        # Main layout
-        main_layout = QHBoxLayout()
-        main_layout.addStretch()
-        main_layout.setSpacing(50)  # Set the spacing between items to 5 pixels
-        main_layout.addLayout(L_v_layout)
-        main_layout.addWidget(self.video_label)
-        main_layout.addLayout(R_v_layout)
-        
-       
+        # Middle layout
+        mid_layout = QVBoxLayout()
+        mid_layout.setSpacing(10)  # Set the spacing between items to 10 pixels
+        mid_layout.addWidget(self.video_label)
+        mid_layout.addWidget(label4)
+        mid_layout.addWidget(self.output_terminal)
+
+        # Assemble all vertical layouts
+        final_layout = QHBoxLayout()
+        final_layout.setSpacing(10)
+
+        # Set stretch factors for left and right layouts
+        final_layout.addLayout(L_v_layout)
+        final_layout.addLayout(mid_layout)
+        final_layout.addLayout(R_v_layout)
+
+        # Align the final layout to the left
+        final_layout.setAlignment(Qt.AlignLeft)
+
+        # Set the main layout for the widget
+        self.setLayout(final_layout)
+
         # Set the main layout for the widget
         
-        self.setLayout(main_layout)
+        self.setLayout(final_layout)
 
         # Open the video source
         self.capture = cv2.VideoCapture(0)
@@ -270,21 +339,35 @@ class VideoPlayer(QWidget):
         text3 = self.textbox3.text()
 
         # Perform any desired actions with the text inputs
-        print("X:", text1)
-        print("Y:", text2)
-        print("Z:", text3)
+        if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
+            print("X:", text1)
+            self.output_terminal.appendPlainText("X: ")
+            self.output_terminal.insertPlainText(str(text1))
+            print("Y:", text2)
+            self.output_terminal.appendPlainText("Y: ")
+            self.output_terminal.insertPlainText(str(text2))
+            print("Z:", text3)
+            self.output_terminal.appendPlainText("Z: ")
+            self.output_terminal.insertPlainText(str(text3))
 
-        # Clear the text boxes
-        self.textbox1.clear()
-        self.textbox2.clear()
-        self.textbox3.clear()
+            # Clear the text boxes
+            self.textbox1.clear()
+            self.textbox2.clear()
+            self.textbox3.clear()
+        else:
+            no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
+            QMessageBox.Retry)
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
-        if self.capture.isOpened():
-            self.capture.release()
-
-        event.accept()
+        reply = QMessageBox.question(self, 'Quit', 'Are you sure you want to quit?',
+        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            if self.capture.isOpened():
+                self.capture.release()
+            event.accept()
+        else:
+            event.ignore()
 
 aruco_type = "DICT_5X5_100"
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
