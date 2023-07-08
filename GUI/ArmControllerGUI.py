@@ -437,7 +437,6 @@ class VideoPlayer(QWidget):
         message_box.setWindowTitle("Display Toggle")
         message_box.setText("Choose an option:")
         message_box.addButton("AR Marker", QMessageBox.AcceptRole)
-        message_box.addButton("Show Contours", QMessageBox.RejectRole)
         message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
         message_box.addButton("Cancel", QMessageBox.RejectRole)
         
@@ -464,8 +463,6 @@ class VideoPlayer(QWidget):
                 self.output_terminal.appendPlainText("Obj Detect: ")
                 self.output_terminal.insertPlainText("ON")
                 Obj_flag=1
-        elif clicked_button == QMessageBox.RejectRole:
-            print("Option 3 selected")
         else:
             print("Cancel button selected")
 
