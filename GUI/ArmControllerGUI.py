@@ -5,8 +5,26 @@ from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTextEdit, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
 
-#Filepath for images, change for your setup
-os.chdir(r'cv2\GUI')
+#Filepath for images and obj_detect setup
+os.chdir(r'cv2\GUI\icons')
+
+#Toggle
+AR_flag = 0
+Obj_flag = 0
+
+#Obj Detect setup
+classesFile = r'coco.txt'
+classNames = []
+
+with open(classesFile, 'rt') as f:
+    classNames = f.read().rstrip('\n').split('\n')
+
+modelConfiguration = 'yolov3.cfg'
+modelWeights = 'yolov3.weights'
+
+net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
+net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
@@ -83,6 +101,34 @@ def aruco_display(corners, ids, rejected, image):
             
     return image
 
+def findObjects(outputs,img):
+    confThreshold = 0.5
+    nmsThreshold = 0.3
+    hT, wT, cT = img.shape
+    bbox = []
+    classIds = []
+    confs = []
+
+    for output in outputs:
+        for det in output:
+            scores = det[5:]
+            classId = np.argmax(scores)
+            confidence = scores[classId]
+
+            if confidence > confThreshold:
+                w,h = int(det[2] * wT), int(det[3] * hT)
+                x,y = int((det[0] * wT) - w/2), int((det[1]*hT)-h/2)
+                bbox.append([x,y,w,h])
+                classIds.append(classId)
+                confs.append(float(confidence))
+    #print(len(bbox))
+    indices = cv2.dnn.NMSBoxes(bbox,confs,confThreshold,nmsThreshold)
+
+    for i in indices:
+        box = bbox[i]
+        x,y,w,h = box[0],box[1],box[2],box[3]
+        cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,255),2)
+        cv2.putText(img, f'{classNames[classIds[i]].upper()} {int(confs[i]*100)}%', (x,y-10),cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255),2)
 
 def calculate_distance(marker_size):
     # Constants for your specific camera setup
@@ -161,13 +207,9 @@ class VideoPlayer(QWidget):
         self.R_button.setFixedWidth(200)
         #self.button.clicked.connect(self.Input_Coord)
 
-        self.Dist_button = CustomButton("Show Distance")
-        self.Dist_button.setFixedWidth(200)
-        #self.button.clicked.connect(self.Input_Coord)
-        
-        self.Cont_button = CustomButton("Show Contour")
-        self.Cont_button.setFixedWidth(200)
-        #self.button.clicked.connect(self.Input_Coord)
+        self.Disp_button = CustomButton("Display")
+        self.Disp_button.setFixedWidth(200)
+        self.Disp_button.clicked.connect(self.Display)
 
         self.Mode_button = CustomButton("Mode")
         self.Mode_button.setFixedWidth(200)
@@ -247,8 +289,7 @@ class VideoPlayer(QWidget):
         R_v_layout = QVBoxLayout()
         R_v_layout.addStretch()
         R_v_layout.setSpacing(10)  # Set the spacing between items to 10 pixels
-        R_v_layout.addWidget(self.Dist_button)
-        R_v_layout.addWidget(self.Cont_button)
+        R_v_layout.addWidget(self.Disp_button)
         R_v_layout.addWidget(self.Mode_button)
         R_v_layout.addLayout(layout1)
         R_v_layout.addLayout(layout2)
@@ -294,10 +335,28 @@ class VideoPlayer(QWidget):
         # Open the video source
         self.capture = cv2.VideoCapture(0)
 
+        #Obj Detect Setup
+        self.whT = 320
+        classesFile = r'coco.txt'
+        classNames = []
+
+        with open(classesFile, 'rt') as f:
+            classNames = f.read().rstrip('\n').split('\n')
+            print(classNames)
+            print(len(classNames))
+
+        modelConfiguration = 'yolov3.cfg'
+        modelWeights = 'yolov3.weights'
+
+        net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
+        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
         # Start the video playback
         self.play()
 
     def play(self):
+        whT = 320
         # Read the next video frame
         ret, frame = self.capture.read()
 
@@ -315,11 +374,23 @@ class VideoPlayer(QWidget):
                 frame_resized.shape[0],
                 QImage.Format_RGB888
             )
-            
-            corners, ids, rejected = cv2.aruco.detectMarkers(frame_resized, arucoDict, parameters=arucoParams)
+            #Object Detect
+            if Obj_flag ==1:
+                blob = cv2.dnn.blobFromImage(frame_resized, 1/255, (whT,whT), [0,0,0], 1, crop=False)
+                net.setInput(blob)
 
-            detected_markers = aruco_display(corners, ids, rejected, frame_resized)
+                layerNames = net.getLayerNames()
+                #print(layerNames)
 
+                outputNames = [layerNames[i - 1] for i in net.getUnconnectedOutLayers()]
+                #print(outputNames)
+                #print(net.getUnconnectedOutLayers())
+                outputs = net.forward(outputNames)
+                findObjects(outputs, frame_resized)
+            #Aruco detect
+            if AR_flag == 1:
+                corners, ids, rejected = cv2.aruco.detectMarkers(frame_resized, arucoDict, parameters=arucoParams)
+                aruco_display(corners, ids, rejected, frame_resized)
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -357,6 +428,46 @@ class VideoPlayer(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
+    def Display(self):
+        #Access flags
+        global AR_flag
+        global Obj_flag
+        # Create a QMessageBox
+        message_box = QMessageBox()
+        message_box.setWindowTitle("Display Toggle")
+        message_box.setText("Choose an option:")
+        message_box.addButton("AR Marker", QMessageBox.AcceptRole)
+        message_box.addButton("Show Contours", QMessageBox.RejectRole)
+        message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
+        message_box.addButton("Cancel", QMessageBox.RejectRole)
+        
+        # Execute the message box and get the clicked button
+        clicked_button = message_box.exec_()
+
+        # Handle the clicked button
+        if clicked_button == QMessageBox.AcceptRole:
+            if AR_flag==1:
+                self.output_terminal.appendPlainText("AR Marker: ")
+                self.output_terminal.insertPlainText("OFF")
+                AR_flag = 0
+            else:
+                self.output_terminal.appendPlainText("AR Marker: ")
+                self.output_terminal.insertPlainText("ON")
+                AR_flag=1
+        elif clicked_button == QMessageBox.DestructiveRole :
+            if Obj_flag == 1:
+                print("Obj Detect off")
+                self.output_terminal.appendPlainText("Obj Detect: ")
+                self.output_terminal.insertPlainText("OFF")
+                Obj_flag=0
+            else:
+                self.output_terminal.appendPlainText("Obj Detect: ")
+                self.output_terminal.insertPlainText("ON")
+                Obj_flag=1
+        elif clicked_button == QMessageBox.RejectRole:
+            print("Option 3 selected")
+        else:
+            print("Cancel button selected")
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
