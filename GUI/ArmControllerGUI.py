@@ -429,42 +429,44 @@ class VideoPlayer(QWidget):
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
     def Display(self):
-        #Access flags
+        # Access flags
         global AR_flag
         global Obj_flag
+
         # Create a QMessageBox
         message_box = QMessageBox()
         message_box.setWindowTitle("Display Toggle")
         message_box.setText("Choose an option:")
-        message_box.addButton("AR Marker", QMessageBox.AcceptRole)
-        message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
-        message_box.addButton("Cancel", QMessageBox.RejectRole)
-        
-        # Execute the message box and get the clicked button
-        clicked_button = message_box.exec_()
+
+        # Add buttons in the desired order
+        ar_marker_button = message_box.addButton("AR Marker", QMessageBox.AcceptRole)
+        obj_detect_button = message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
+
+        # Execute the message box
+        message_box.exec_()
+
+        # Get the role of the clicked button
+        clicked_button_role = message_box.buttonRole(message_box.clickedButton())
 
         # Handle the clicked button
-        if clicked_button == QMessageBox.AcceptRole:
-            if AR_flag==1:
-                self.output_terminal.appendPlainText("AR Marker: ")
-                self.output_terminal.insertPlainText("OFF")
+        if clicked_button_role == QMessageBox.AcceptRole:
+            # Handle AR Marker option
+            if AR_flag == 1:
+                self.output_terminal.appendPlainText("AR Marker: OFF")
                 AR_flag = 0
             else:
-                self.output_terminal.appendPlainText("AR Marker: ")
-                self.output_terminal.insertPlainText("ON")
-                AR_flag=1
-        elif clicked_button == QMessageBox.DestructiveRole :
+                self.output_terminal.appendPlainText("AR Marker: ON")
+                AR_flag = 1
+        elif clicked_button_role == QMessageBox.DestructiveRole:
+            # Handle Object Detect option
             if Obj_flag == 1:
-                print("Obj Detect off")
-                self.output_terminal.appendPlainText("Obj Detect: ")
-                self.output_terminal.insertPlainText("OFF")
-                Obj_flag=0
+                self.output_terminal.appendPlainText("Object Detect: OFF")
+                Obj_flag = 0
             else:
-                self.output_terminal.appendPlainText("Obj Detect: ")
-                self.output_terminal.insertPlainText("ON")
-                Obj_flag=1
+                self.output_terminal.appendPlainText("Object Detect: ON")
+                Obj_flag = 1
         else:
-            print("Cancel button selected")
+            print("Unknown button clicked")
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
