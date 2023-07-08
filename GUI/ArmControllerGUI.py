@@ -441,6 +441,7 @@ class VideoPlayer(QWidget):
         # Add buttons in the desired order
         ar_marker_button = message_box.addButton("AR Marker", QMessageBox.AcceptRole)
         obj_detect_button = message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
+        cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
 
         # Execute the message box
         message_box.exec_()
@@ -465,6 +466,9 @@ class VideoPlayer(QWidget):
             else:
                 self.output_terminal.appendPlainText("Object Detect: ON")
                 Obj_flag = 1
+        elif clicked_button_role == QMessageBox.RejectRole:
+            # Handle Cancel option
+            print("Cancel button clicked")
         else:
             print("Unknown button clicked")
 
