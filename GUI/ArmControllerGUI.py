@@ -328,29 +328,8 @@ class VideoPlayer(QWidget):
         # Set the main layout for the widget
         self.setLayout(final_layout)
 
-        # Set the main layout for the widget
-        
-        self.setLayout(final_layout)
-
         # Open the video source
         self.capture = cv2.VideoCapture(0)
-
-        #Obj Detect Setup
-        self.whT = 320
-        classesFile = r'coco.txt'
-        classNames = []
-
-        with open(classesFile, 'rt') as f:
-            classNames = f.read().rstrip('\n').split('\n')
-            print(classNames)
-            print(len(classNames))
-
-        modelConfiguration = 'yolov3.cfg'
-        modelWeights = 'yolov3.weights'
-
-        net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
-        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
         # Start the video playback
         self.play()
