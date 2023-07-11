@@ -1,4 +1,4 @@
-import math
+mport math
 import motorctrl_v1 as motor
 import Movement_Calc_v2 as calculation
 import numpy as np
@@ -12,22 +12,24 @@ FOREARM_ID = 3
 WRIST_ID = 4
 CLAW_ID = 0
 
-PORT_NUM = 'COM4'
+PORT_NUM = 'COM5'
 BAUDRATE = 1000000
 
 MOVEARM_MODE = 1
 
 ALL_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
-MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID]
+MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
 
 frameX = 0
 objX = 0
+frameY = 0
+objY = 0
 
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
     "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
     "DICT_4X4_250": cv2.aruco.DICT_4X4_250,
-    "DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
+    "DICT_4X4_1000": cv2.aruco.DICT_4X4_100,
     "DICT_5X5_50": cv2.aruco.DICT_5X5_50,
     "DICT_5X5_100": cv2.aruco.DICT_5X5_100,
     "DICT_5X5_250": cv2.aruco.DICT_5X5_250,
@@ -69,12 +71,16 @@ def aruco_display(corners, ids, rejected, image):
             h,w,_ = img.shape
             global objX
             global frameX
+            global objY
+            global frameY
             fX=int(w/2)
             frameX = fX
             fY=int(h/2)
+            frameY = fY
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             objX = cX
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+            objY = cY
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
             cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
@@ -152,10 +158,12 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
 # cv2.destroyAllWindows()
 # cap.release()
+motor.portInitialization(PORT_NUM, ALL_IDs)
+motor.dxlSetVelo([20, 20, 20, 20, 20],[0, 1, 2, 3, 4])
+motor.motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
 
 # if __name__ == "__main__":
-motor.portInitialization(PORT_NUM, [1])
 while (MOVEARM_MODE):
         while cap.isOpened():
 #         x = int(input("Enter the goal X coordinate for the arm: "))
@@ -209,24 +217,58 @@ while (MOVEARM_MODE):
 
             cv2.imshow("Image", detected_markers)
 
+
             # mode = input("Enter 'Y' to continue arm movement. Else, press any key: ")
             # if (mode != 'Y'):
             #     MOVEARM_MODE = 0
             #     motor.portTermination()
-            if(abs(objX - frameX) > 30):
+            if(abs(objX - frameX) > 30 or abs(objY - frameY) > 30):
                  difference = objX - frameX
-                 print('difference: ' + str(difference))
-                 current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                 print("current: " + str(current))
-                 if (difference > 0):
+                 differenceZ = objY - frameY
+                 print('x difference: ' + str(difference))
+                 print('y difference: ' + str(differenceZ))
+                 current0 = motor._map(motor.ReadMotorData(0, 132), 0, 4095, 0, 360)
+                 current1 = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                 current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
+                 current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
+                 current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
+                 if (current0 == 180):
+                     print("current ID0: " + str(current0) + " (Closed)")
+                 else:
+                     print("current ID0: " + str(current0) + " (Opened)") 
+                 print("current ID1: " + str(current1))
+                 print("current ID2: " + str(current2))
+                 print("current ID3: " + str(current3))
+                 print("current ID4: " + str(current4))
+                 if (difference < 10 and differenceZ > 10 and ids is not None):
                     # motor.WriteMotorData(1, 116, current - 10)
                     # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                    motor.motorRunWithInputs([current - 3], [1])
-                 else:
-                    motor.motorRunWithInputs([current + 3], [1])
-            else:
-                difference = 0
-
+                    motor.motorRunWithInputs([current1 - difference/20], [1])
+                    motor.motorRunWithInputs([(current2 - (differenceZ * (6.9/40))), (current3 + (differenceZ * (18/40))), (current4 - (differenceZ * (6.3/40)))], [2, 3, 4])
+                 elif (difference > 10 and differenceZ > 10 and ids is not None):
+                    motor.motorRunWithInputs([current1 - difference/20], [1])
+                    motor.motorRunWithInputs([(current2 - (differenceZ * (6.9/40))), (current3 + (differenceZ * (18/40))), (current4 - (differenceZ * (6.3/40)))], [2, 3, 4])
+                 elif (difference < 10 and differenceZ < 10 and ids is not None):
+                    motor.motorRunWithInputs([current1 - difference/20], [1])
+                    motor.motorRunWithInputs([(current2 + (differenceZ * (6.9/40))), (current3 - (differenceZ * (18/40))), (current4 + (differenceZ * (6.3/40)))], [2, 3, 4])
+                 elif (difference > 10 and differenceZ < 10 and ids is not None):
+                    motor.motorRunWithInputs([current1 - difference/20], [1])
+                    motor.motorRunWithInputs([(current2 + (differenceZ * (6.9/40))), (current3 - (differenceZ * (18/40))), (current4 + (differenceZ * (6.3/40)))], [2, 3, 4])            
+                 elif (abs(difference) > 10 and ids is not None):
+                    motor.motorRunWithInputs([current1 - difference/20], [1])
+                    motor.motorRunWithInputs([(current2 + (differenceZ * (6.9/40))), (current3 - (differenceZ * (18/40))), (current4 + (differenceZ * (6.3/40)))], [2, 3, 4])
+                 elif (differenceZ < 10 and ids is not None):
+                    motor.motorRunWithInputs([(current2 + (differenceZ * (6.9/40))), (current3 - (differenceZ * (18/40))), (current4 + (differenceZ * (6.3/40)))], [2, 3, 4])
+                 elif (differenceZ > 10 and ids is not None):
+                    motor.motorRunWithInputs([(current2 - (differenceZ * (6.9/40))), (current3 + (differenceZ * (18/40))), (current4 - (differenceZ * (6.3/40)))], [2, 3, 4])
+                # Make sure it loops this part only once? Then, make sure it can reach for the object, using the y poition
+                # Variable: distance_feet_rounded 
+                # - Gives the distance from the AR Marker, to the camera
+                #  - Double measure the AR Marker, because there may be some errors, especially since we modified it a lot
+                # motor.motorRunWithInputs([(current2 - (7.6/40)), (current3 + (22/40)), (current4 - (7.6/40))], [2, 3, 4])
+                # - Makes the arm extend by 1 pixel (Hopefully)
+                # motor.motorRunWithInputs([(current2 + (7.6/40)), (current3 - (22/40)), (current4 + (7.6/40))], [2, 3, 4])  
+                # - Retracts the arm by 1 pixel (Hopefully)           
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
                 break
@@ -235,4 +277,4 @@ while (MOVEARM_MODE):
 cv2.destroyAllWindows()
 cap.release()
 
-#     #this is the new update for the new github        
+#     #this is the new update for the new github 
