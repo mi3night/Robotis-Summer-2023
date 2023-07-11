@@ -12,7 +12,7 @@ FOREARM_ID = 3
 WRIST_ID = 4
 CLAW_ID = 0
 
-PORT_NUM = 'COM5'
+PORT_NUM = 'COM4'
 BAUDRATE = 1000000
 
 MOVEARM_MODE = 1
@@ -221,9 +221,11 @@ while (MOVEARM_MODE):
                  if (difference > 0):
                     # motor.WriteMotorData(1, 116, current - 10)
                     # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                    motor.motorRunWithInputs([current - 1], [1])
+                    motor.motorRunWithInputs([current - 3], [1])
                  else:
-                    motor.motorRunWithInputs([current + 1], [1])
+                    motor.motorRunWithInputs([current + 3], [1])
+            else:
+                difference = 0
 
             key = cv2.waitKey(1) & 0xFF
             if key == ord("q"):
