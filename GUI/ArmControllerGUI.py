@@ -1,6 +1,9 @@
 import cv2
 import numpy as np
 import os
+import math
+#import motorctrl_v1 as motor
+#import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTextEdit, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
@@ -11,6 +14,25 @@ os.chdir(r'cv2\GUI\icons')
 #Toggle
 AR_flag = 0
 Obj_flag = 0
+#Arm Setup
+BASE_ID = 1
+BICEP_ID = 2
+FOREARM_ID = 3
+WRIST_ID = 4
+CLAW_ID = 0
+
+PORT_NUM = 'COM4'
+BAUDRATE = 1000000
+
+MOVEARM_MODE = 1
+
+ALL_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
+MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
+
+frameX = 0
+objX = 0
+frameY = 0
+objY = 0
 
 #Obj Detect setup
 classesFile = r'coco.txt'
@@ -49,6 +71,11 @@ ARUCO_DICT = {
     "DICT_APRILTAG_36h10": cv2.aruco.DICT_APRILTAG_36h10,
     "DICT_APRILTAG_36h11": cv2.aruco.DICT_APRILTAG_36h11
 }
+
+#AR marker setup
+aruco_type = "DICT_5X5_100"
+arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
+arucoParams = cv2.aruco.DetectorParameters_create()
 
 def aruco_display(corners, ids, rejected, image):
     if len(corners) > 0:
@@ -162,11 +189,11 @@ class CustomButton(QPushButton):
             }
         """)
 
-class VideoPlayer(QWidget):
+class ControllerGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
-        self.setGeometry(50, 50, 1200, 800)  # Set the window size to 800x800 pixels
+        self.setGeometry(50, 50, 1000, 800)  # Set the window size to 800x800 pixels
 
         # Create a QLabel to display the video feed
         self.video_label = QLabel(self)
@@ -277,7 +304,7 @@ class VideoPlayer(QWidget):
         label4 = QLabel("Output Terminal:")
         self.output_terminal = QPlainTextEdit()
         self.output_terminal.setReadOnly(True)
-        self.output_terminal.setGeometry(QRect(10, 90, 331, 111))
+        self.output_terminal.setGeometry(QRect(10, 90, 331, 80))
         self.output_terminal.setFont(QFont("DejaVu Sans Mono", 8))
         self.output_terminal.setStyleSheet("color: white;"
                                             "background-color: black;"
@@ -328,8 +355,29 @@ class VideoPlayer(QWidget):
         # Set the main layout for the widget
         self.setLayout(final_layout)
 
+        # Set the main layout for the widget
+        
+        self.setLayout(final_layout)
+
         # Open the video source
         self.capture = cv2.VideoCapture(0)
+
+        #Obj Detect Setup
+        self.whT = 320
+        classesFile = r'coco.txt'
+        classNames = []
+
+        with open(classesFile, 'rt') as f:
+            classNames = f.read().rstrip('\n').split('\n')
+            print(classNames)
+            print(len(classNames))
+
+        modelConfiguration = 'yolov3.cfg'
+        modelWeights = 'yolov3.weights'
+
+        net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
+        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
         # Start the video playback
         self.play()
@@ -343,33 +391,25 @@ class VideoPlayer(QWidget):
             # Convert the frame to RGB format
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-            # Resize the frame to 800x800 pixels
-            frame_resized = cv2.resize(frame_rgb, (800, 800))
-
             # Create a QImage from the resized frame
             image = QImage(
-                frame_resized.data,
-                frame_resized.shape[1],
-                frame_resized.shape[0],
+                frame_rgb.data,
+                frame_rgb.shape[1],
+                frame_rgb.shape[0],
                 QImage.Format_RGB888
             )
             #Object Detect
             if Obj_flag ==1:
-                blob = cv2.dnn.blobFromImage(frame_resized, 1/255, (whT,whT), [0,0,0], 1, crop=False)
+                blob = cv2.dnn.blobFromImage(frame_rgb, 1/255, (whT,whT), [0,0,0], 1, crop=False)
                 net.setInput(blob)
-
                 layerNames = net.getLayerNames()
-                #print(layerNames)
-
                 outputNames = [layerNames[i - 1] for i in net.getUnconnectedOutLayers()]
-                #print(outputNames)
-                #print(net.getUnconnectedOutLayers())
                 outputs = net.forward(outputNames)
-                findObjects(outputs, frame_resized)
+                findObjects(outputs, frame_rgb)
             #Aruco detect
             if AR_flag == 1:
-                corners, ids, rejected = cv2.aruco.detectMarkers(frame_resized, arucoDict, parameters=arucoParams)
-                aruco_display(corners, ids, rejected, frame_resized)
+                corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
+                aruco_display(corners, ids, rejected, frame_rgb)
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -447,9 +487,10 @@ class VideoPlayer(QWidget):
                 Obj_flag = 1
         elif clicked_button_role == QMessageBox.RejectRole:
             # Handle Cancel option
-            print("Cancel button clicked")
+            pass
         else:
-            print("Unknown button clicked")
+            self.output_terminal.appendPlainText("Unknown button clicked")
+
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
@@ -462,19 +503,21 @@ class VideoPlayer(QWidget):
         else:
             event.ignore()
 
-aruco_type = "DICT_5X5_100"
-arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
-arucoParams = cv2.aruco.DetectorParameters_create()
 
+def main():
+    # Create the QApplication
+    app = QApplication([])
 
-# Create the QApplication
-app = QApplication([])
+    # Create an instance of the VideoPlayer class
+    GUI = ControllerGUI()
 
-# Create an instance of the VideoPlayer class
-video_player = VideoPlayer()
+    # Show the window
+    GUI.show()
 
-# Show the window
-video_player.show()
+    # Run the application event loop
+    app.exec_()
 
-# Run the application event loop
-app.exec_()
+    print("ok")
+
+if __name__=="__main__":
+    main()
