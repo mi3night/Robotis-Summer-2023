@@ -35,6 +35,8 @@ frameY = 0
 objY = 0
 
 motor.portInitialization(PORT_NUM, ALL_IDs)
+motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+motor.motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
 #Obj Detect setup
 classesFile = r'coco.txt'
@@ -253,7 +255,7 @@ class ControllerGUI(QWidget):
 
         self.R_button = CustomButton("Reset")
         self.R_button.setFixedWidth(200)
-        #self.button.clicked.connect(self.Input_Coord)
+        self.R_button.clicked.connect(self.ResetPos)
 
         self.Disp_button = CustomButton("Display")
         self.Disp_button.setFixedWidth(200)
@@ -509,6 +511,7 @@ class ControllerGUI(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
+    
     def Display(self):
         # Access flags
         global AR_flag
@@ -562,8 +565,8 @@ class ControllerGUI(QWidget):
             message_box.setText("Choose an option:")
 
             # Add buttons in the desired order
-            ar_marker_button = message_box.addButton("AR marker tracking", QMessageBox.AcceptRole)
-            obj_detect_button = message_box.addButton("TBD", QMessageBox.DestructiveRole)
+            tracking_button = message_box.addButton("AR marker tracking", QMessageBox.AcceptRole)
+            TBD_button = message_box.addButton("TBD", QMessageBox.DestructiveRole)
             cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
 
             # Execute the message box
@@ -597,6 +600,11 @@ class ControllerGUI(QWidget):
                 pass
             else:
                 self.output_terminal.appendPlainText("Unknown button clicked")
+    
+    def ResetPos(self):
+        self.output_terminal.appendPlainText("Moving to default position")
+        motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        motor.motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
