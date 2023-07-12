@@ -2,14 +2,14 @@ import cv2
 import numpy as np
 import os
 import math
-#import motorctrl_v1 as motor
-#import Movement_Calc_v2 as calculation
+import motorctrl_v1 as motor
+import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTextEdit, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
 
 #Filepath for images and obj_detect setup
-os.chdir(r'cv2\GUI\icons')
+os.chdir(r'C:\Users\newto\OneDrive\Documents\GitHub\Robotis-Summer-2023\GUI')
 
 #Toggle
 AR_flag = 0
@@ -21,7 +21,7 @@ FOREARM_ID = 3
 WRIST_ID = 4
 CLAW_ID = 0
 
-PORT_NUM = 'COM4'
+PORT_NUM = 'COM5'
 BAUDRATE = 1000000
 
 MOVEARM_MODE = 1
