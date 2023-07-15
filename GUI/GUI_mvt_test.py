@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
 import os
-import motorctrl_v1 as motor
-import Movement_Calc_v2 as calculation
+#import motorctrl_v1 as motor
+#import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
-from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
 
 #Filepath for images and obj_detect setup
@@ -34,9 +34,9 @@ objX = 0
 frameY = 0
 objY = 0
 
-motor.portInitialization(PORT_NUM, ALL_IDs)
-motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-motor.motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
+#motor.portInitialization(PORT_NUM, ALL_IDs)
+#motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+#motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
 #Obj Detect setup
 classesFile = r'coco.txt'
@@ -187,6 +187,62 @@ def calculate_distance(marker_size):
 
     return distance_in_feet, distance_per_pixel
 
+class ToggleButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("""
+            QPushButton {            
+                background-color: #DDDDDD;
+                color: #000000;
+                font-weight: bold;
+                font-size: 14px;
+                padding: 10px;
+                border: 2px solid #555555;
+                border-radius: 10px;
+            }
+            QPushButton:pressed, QPushButton:checked {
+                background-color: green;
+                border: 2px solid #555555;
+            }
+        """)
+
+        self.setCheckable(True)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Right, Qt.Key_Left):
+            self.setChecked(True)
+            print()
+            self.setStyleSheet("""
+                QPushButton {             
+                    background-color: green;
+                    color: #000000;
+                    font-weight: bold;
+                    font-size: 14px;
+                    padding: 10px;
+                    border: 2px solid #555555;
+                    border-radius: 10px;
+                }
+            """)
+
+    def keyReleaseEvent(self, event: QKeyEvent):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Right, Qt.Key_Left):
+            self.setChecked(False)
+            self.setStyleSheet("""
+                QPushButton {             
+                    background-color: #DDDDDD;
+                    color: #000000;
+                    font-weight: bold;
+                    font-size: 14px;
+                    padding: 10px;
+                    border: 2px solid #555555;
+                    border-radius: 10px;
+                }
+                QPushButton:pressed {
+                    background-color: green;
+                    border: 2px solid #555555;
+                }
+            """)
+
 
 class CustomButton(QPushButton):
     def __init__(self, text):
@@ -210,7 +266,17 @@ class CustomButton(QPushButton):
             }
         """)
 
-
+def ArrowMov(direction):
+    if direction == 0:
+        print("UP")
+    elif direction == 1:
+        print("RIGHT")
+    elif direction == 2:
+        print("DOWN")
+    elif direction == 3:
+        print("LEFT")
+    else:
+        print("Invalid direction:", direction)
 
 class ControllerGUI(QWidget):
     def __init__(self):
@@ -271,30 +337,43 @@ class ControllerGUI(QWidget):
 
         #arrow buttons
         #up
-        toggle_up = QPushButton(self)
+        toggle_up = ToggleButton("",self)
         toggle_up.setFixedWidth(50)
         toggle_up.setFixedWidth(50)
         toggle_up.setIcon(QIcon("uparrow.png"))
-        #toggle_up.clicked.connect(self.move_up)
+        up = QKeySequence(Qt.Key_Up)
+        toggle_up.setShortcut(up)
+        toggle_up.clicked.connect(lambda: ArrowMov(0))
         #down
-        toggle_down = QPushButton(self)
+        toggle_down = ToggleButton("",self)
         toggle_down.setFixedWidth(50)
         toggle_down.setFixedWidth(50)
         toggle_down.setIcon(QIcon("downarrow.png"))
-        #toggle_down.clicked.connect(self.move_down)
+        down = QKeySequence(Qt.Key_Down)
+        toggle_down.setShortcut(down)
+        toggle_down.clicked.connect(lambda: ArrowMov(2))
         #right
-        toggle_right = QPushButton(self)
+        toggle_right = ToggleButton("",self)
         toggle_right.setFixedWidth(50)
         toggle_right.setFixedWidth(50)
+        right = QKeySequence(Qt.Key_Right)
+        toggle_right.setShortcut(right)
         toggle_right.setIcon(QIcon("rightarrow.png"))
-        #toggle_right.clicked.connect(self.move_right)
+        toggle_right.clicked.connect(lambda: ArrowMov(1))
         #left
-        toggle_left = QPushButton(self)
+        toggle_left = ToggleButton("",self)
         toggle_left.setFixedWidth(50)
         toggle_left.setFixedWidth(50)
         toggle_left.setIcon(QIcon("leftarrow.png"))
-        #toggle_left.clicked.connect(self.move_left)
+        left = QKeySequence(Qt.Key_Left)
+        toggle_left.setShortcut(left)
+        toggle_left.clicked.connect(lambda: ArrowMov(3))
 
+        # Set focus policy to capture arrow keys
+        toggle_up.setFocusPolicy(Qt.StrongFocus)
+        toggle_down.setFocusPolicy(Qt.StrongFocus)
+        toggle_left.setFocusPolicy(Qt.StrongFocus)
+        toggle_right.setFocusPolicy(Qt.StrongFocus)
 
         button_grid = QGridLayout()
         button_grid.addWidget(toggle_up, 0,1)
@@ -425,16 +504,18 @@ class ControllerGUI(QWidget):
                 if(abs(objX - frameX) > 30):
                     difference = objX - frameX
                     print('x difference: ' + str(difference))
-                    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                    print("current: " + str(current))
+                    #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                    #print("current: " + str(current))
                     if (difference < 10 and ids is not None):
-                        # motor.WriteMotorData(1, 116, current - 10)
-                        # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                        motor.dxlSetVelo([37],[1])
-                        motor.motorRunWithInputs([current - difference/20], [1])
+                        pass
+                        # #motor.WriteMotorData(1, 116, current - 10)
+                        # #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
                     elif (difference > 10 and ids is not None):
-                        motor.dxlSetVelo([37],[1])
-                        motor.motorRunWithInputs([current - difference/20], [1])
+                        pass
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -463,26 +544,28 @@ class ControllerGUI(QWidget):
             self.output_terminal.insertPlainText(str(Z_inp))
 
         #From robotic arm code
-            forearm_mode = int(input("Enter '0', '1', or '2' for forearm mode: "))
+            forearm_mode = 0
 
-            claw_angle =  int(input("Enter the mode for the claw [0] to open and [1] to close: "))
+            claw_angle =  1
 
 
             if (claw_angle == 0):
-                motor.motorRunWithInputs([90], [0])
+                #motor.#motorRunWithInputs([90], [0])
+                pass
             else:
-                motor.motorRunWithInputs([180], [0])
+                #motor.#motorRunWithInputs([180], [0])
+                pass
 
             coor = [X_inp,Y_inp,Z_inp]
-            angles = calculation.angle_Calc(coor, forearm_mode)
-            print(angles)
+            #sangles = calculation.angle_Calc(coor, forearm_mode)
+            #print(angles)
             
-            motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
-            motor.simMotorRun(angles, MOVE_IDs)
+            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
+            #motor.simMotorRun(angles, MOVE_IDs)
 
 
-            # motor.motorRunWithInputs([180], [0])
-            # motor.motorRunWithInputs([225], [0])
+            # #motor.#motorRunWithInputs([180], [0])
+            # #motor.#motorRunWithInputs([225], [0])
 
             # Clear the text boxes
             self.textbox1.clear()
@@ -583,8 +666,8 @@ class ControllerGUI(QWidget):
     
     def ResetPos(self):
         self.output_terminal.appendPlainText("Moving to default position")
-        motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-        motor.motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
+        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        #motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
