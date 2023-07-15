@@ -415,23 +415,23 @@ class ControllerGUI(QWidget):
         # Create QLineEdit widgets for updating Motors
         self.motor1 = QLineEdit(self)
         self.motor1.setReadOnly(True)
-        self.motor1.setFixedWidth(50)
+        self.motor1.setFixedWidth(100)
 
         self.motor2 = QLineEdit(self)
         self.motor2.setReadOnly(True)
-        self.motor2.setFixedWidth(50)
+        self.motor2.setFixedWidth(100)
 
         self.motor3 = QLineEdit(self)
         self.motor3.setReadOnly(True)
-        self.motor3.setFixedWidth(50)
+        self.motor3.setFixedWidth(100)
 
         self.motor4 = QLineEdit(self)
         self.motor4.setReadOnly(True)
-        self.motor4.setFixedWidth(50)
+        self.motor4.setFixedWidth(100)
 
         self.motor5 = QLineEdit(self)
         self.motor5.setReadOnly(True)
-        self.motor5.setFixedWidth(50)
+        self.motor5.setFixedWidth(100)
 
 
         # Create QLabel widgets for the text box labels
