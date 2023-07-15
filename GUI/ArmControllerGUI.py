@@ -1,19 +1,19 @@
 import cv2
 import numpy as np
 import os
-import math
-import motorctrl_v1 as motor
-import Movement_Calc_v2 as calculation
+#import motorctrl_v1 as motor
+#import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
-from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QTextEdit, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
 
 #Filepath for images and obj_detect setup
-os.chdir(r'C:\Users\newto\OneDrive\Documents\GitHub\Robotis-Summer-2023\GUI')
+os.chdir(r'cv2\GUI\icons')
 
 #Toggle
 AR_flag = 0
 Obj_flag = 0
+mode = 0
 #Arm Setup
 BASE_ID = 1
 BICEP_ID = 2
@@ -33,6 +33,10 @@ frameX = 0
 objX = 0
 frameY = 0
 objY = 0
+
+#motor.portInitialization(PORT_NUM, ALL_IDs)
+#motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+#motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
 #Obj Detect setup
 classesFile = r'coco.txt'
@@ -94,47 +98,54 @@ def aruco_display(corners, ids, rejected, image):
             cv2.line(image, topRight, bottomRight, (255, 0, 255), 2)
             cv2.line(image, bottomRight, bottomLeft, (255, 0, 255), 2)
             cv2.line(image, bottomLeft, topLeft, (255, 0, 255), 2)
-            
-            #Object's center pixel coordinates
+
+            #Object's center pixel coordinates    
+            h,w,_ = image.shape
+            global objX
+            global frameX
+            global objY
+            global frameY
+            fX=int(w/2)
+            frameX = fX
+            fY=int(h/2)
+            frameY = fY
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+            objX = cX
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+            objY = cY
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
             cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
-            print("At pixel coordinates ({}, {})".format(cX,cY))
-
-
-            #Frame center pixel
-            h,w,_ = image.shape
-            fX=int(w/2)
-            fY=int(h/2)
-            #Line b/w center and object
-            cv2.line(image, (fX,fY), (cX,cY), (255, 0, 0), 2)
-            cv2.circle(image, (fX,fY), 3, (255, 0, 0), -1)
-            cv2.putText(image," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            
+            #print("At pixel coordinates ({}, {})".format(cX,cY))
 
             # Calculate distance
+            
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
-            distance = calculate_distance(marker_size)
-            print("[Inference] ArUco marker ID: {}, Distance: {} feet\n".format(markerID, distance))
-            outlineText = "ID: " + str(markerID) + " at " +  str(round(distance,2)) + " feet"
+            distance_feet, distance_per_pixel = calculate_distance(marker_size)
+            distance_feet_rounded = round(distance_feet, 2)
+            distance_per_pixel_rounded = round(distance_per_pixel, 6)
+            arX = distance_per_pixel * (cX - fX) / 3.6
+            arY = distance_feet_rounded
+            arX = round(arX, 4)
+            arY = round(arY, 4)
+            #print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
+            outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
+            outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
+            
 
             cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 0, 255), 2)
-            
-            
-
-            
+            cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
     return image
 
 def findObjects(outputs,img):
     confThreshold = 0.5
     nmsThreshold = 0.3
-    hT, wT, cT = img.shape
+    hT, wT,_ = img.shape
     bbox = []
     classIds = []
     confs = []
+    centerPoints = []
 
     for output in outputs:
         for det in output:
@@ -148,24 +159,90 @@ def findObjects(outputs,img):
                 bbox.append([x,y,w,h])
                 classIds.append(classId)
                 confs.append(float(confidence))
+                center_x = int(x + w / 2)
+                center_y = int(y + h / 2)
+                centerPoints.append((center_x, center_y))
     #print(len(bbox))
     indices = cv2.dnn.NMSBoxes(bbox,confs,confThreshold,nmsThreshold)
 
     for i in indices:
         box = bbox[i]
-        x,y,w,h = box[0],box[1],box[2],box[3]
-        cv2.rectangle(img,(x,y),(x+w,y+h),(255,0,255),2)
-        cv2.putText(img, f'{classNames[classIds[i]].upper()} {int(confs[i]*100)}%', (x,y-10),cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255),2)
+        x, y, w, h = box[0], box[1], box[2], box[3]
+        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 255), 2)
+        cv2.putText(img, f'{classNames[classIds[i]].upper()} {int(confs[i]*100)}%', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+        center_x, center_y = centerPoints[i]
+        cv2.circle(img, (center_x, center_y), 5, (0, 255, 0), -1)
+        text = f'({center_x}, {center_y})'
+        cv2.putText(img, text, (center_x - 20, center_y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
 def calculate_distance(marker_size):
     # Constants for your specific camera setup
     # You need to calibrate these values for your camera
-    marker_size_at_one_meter = 0.3332371  # Adjust this value based on the actual marker size at 1 meter distance
-    focal_length = 100  # Focal length of your camera in pixels
+    marker_size_at_one_meter = 0.1055  # Adjust this value based on the actual marker size at 1 meter distance
+    focal_length = 226  # Focal length of your camera in pixels
     
     # Convert meters to feet
     distance_in_feet = marker_size_at_one_meter * focal_length / marker_size * 3.28084
-    return distance_in_feet
+    distance_per_pixel = distance_in_feet / focal_length
+
+    return distance_in_feet, distance_per_pixel
+
+class ToggleButton(QPushButton):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+        self.setStyleSheet("""
+            QPushButton {            
+                background-color: #DDDDDD;
+                color: #000000;
+                font-weight: bold;
+                font-size: 14px;
+                padding: 10px;
+                border: 2px solid #555555;
+                border-radius: 10px;
+            }
+            QPushButton:pressed, QPushButton:checked {
+                background-color: green;
+                border: 2px solid #555555;
+            }
+        """)
+
+        self.setCheckable(True)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Right, Qt.Key_Left):
+            self.setChecked(True)
+            print()
+            self.setStyleSheet("""
+                QPushButton {             
+                    background-color: green;
+                    color: #000000;
+                    font-weight: bold;
+                    font-size: 14px;
+                    padding: 10px;
+                    border: 2px solid #555555;
+                    border-radius: 10px;
+                }
+            """)
+
+    def keyReleaseEvent(self, event: QKeyEvent):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Right, Qt.Key_Left):
+            self.setChecked(False)
+            self.setStyleSheet("""
+                QPushButton {             
+                    background-color: #DDDDDD;
+                    color: #000000;
+                    font-weight: bold;
+                    font-size: 14px;
+                    padding: 10px;
+                    border: 2px solid #555555;
+                    border-radius: 10px;
+                }
+                QPushButton:pressed {
+                    background-color: green;
+                    border: 2px solid #555555;
+                }
+            """)
+
 
 class CustomButton(QPushButton):
     def __init__(self, text):
@@ -188,6 +265,18 @@ class CustomButton(QPushButton):
                 background-color: #cc0000;
             }
         """)
+
+def ArrowMov(direction):
+    if direction == 0:
+        print("UP")
+    elif direction == 1:
+        print("RIGHT")
+    elif direction == 2:
+        print("DOWN")
+    elif direction == 3:
+        print("LEFT")
+    else:
+        print("Invalid direction:", direction)
 
 class ControllerGUI(QWidget):
     def __init__(self):
@@ -232,7 +321,7 @@ class ControllerGUI(QWidget):
 
         self.R_button = CustomButton("Reset")
         self.R_button.setFixedWidth(200)
-        #self.button.clicked.connect(self.Input_Coord)
+        self.R_button.clicked.connect(self.ResetPos)
 
         self.Disp_button = CustomButton("Display")
         self.Disp_button.setFixedWidth(200)
@@ -240,7 +329,7 @@ class ControllerGUI(QWidget):
 
         self.Mode_button = CustomButton("Mode")
         self.Mode_button.setFixedWidth(200)
-        #self.button.clicked.connect(self.Input_Coord)
+        self.Mode_button.clicked.connect(self.Mode)
     
         self.exit_button = QPushButton("Exit", self)
         self.exit_button.setFixedWidth(200)
@@ -248,30 +337,43 @@ class ControllerGUI(QWidget):
 
         #arrow buttons
         #up
-        toggle_up = QPushButton(self)
+        toggle_up = ToggleButton("",self)
         toggle_up.setFixedWidth(50)
         toggle_up.setFixedWidth(50)
         toggle_up.setIcon(QIcon("uparrow.png"))
-        #toggle_up.clicked.connect(self.move_up)
+        up = QKeySequence(Qt.Key_Up)
+        toggle_up.setShortcut(up)
+        toggle_up.clicked.connect(lambda: ArrowMov(0))
         #down
-        toggle_down = QPushButton(self)
+        toggle_down = ToggleButton("",self)
         toggle_down.setFixedWidth(50)
         toggle_down.setFixedWidth(50)
         toggle_down.setIcon(QIcon("downarrow.png"))
-        #toggle_down.clicked.connect(self.move_down)
+        down = QKeySequence(Qt.Key_Down)
+        toggle_down.setShortcut(down)
+        toggle_down.clicked.connect(lambda: ArrowMov(2))
         #right
-        toggle_right = QPushButton(self)
+        toggle_right = ToggleButton("",self)
         toggle_right.setFixedWidth(50)
         toggle_right.setFixedWidth(50)
+        right = QKeySequence(Qt.Key_Right)
+        toggle_right.setShortcut(right)
         toggle_right.setIcon(QIcon("rightarrow.png"))
-        #toggle_right.clicked.connect(self.move_right)
+        toggle_right.clicked.connect(lambda: ArrowMov(1))
         #left
-        toggle_left = QPushButton(self)
+        toggle_left = ToggleButton("",self)
         toggle_left.setFixedWidth(50)
         toggle_left.setFixedWidth(50)
         toggle_left.setIcon(QIcon("leftarrow.png"))
-        #toggle_left.clicked.connect(self.move_left)
+        left = QKeySequence(Qt.Key_Left)
+        toggle_left.setShortcut(left)
+        toggle_left.clicked.connect(lambda: ArrowMov(3))
 
+        # Set focus policy to capture arrow keys
+        toggle_up.setFocusPolicy(Qt.StrongFocus)
+        toggle_down.setFocusPolicy(Qt.StrongFocus)
+        toggle_left.setFocusPolicy(Qt.StrongFocus)
+        toggle_right.setFocusPolicy(Qt.StrongFocus)
 
         button_grid = QGridLayout()
         button_grid.addWidget(toggle_up, 0,1)
@@ -355,29 +457,8 @@ class ControllerGUI(QWidget):
         # Set the main layout for the widget
         self.setLayout(final_layout)
 
-        # Set the main layout for the widget
-        
-        self.setLayout(final_layout)
-
         # Open the video source
         self.capture = cv2.VideoCapture(0)
-
-        #Obj Detect Setup
-        self.whT = 320
-        classesFile = r'coco.txt'
-        classNames = []
-
-        with open(classesFile, 'rt') as f:
-            classNames = f.read().rstrip('\n').split('\n')
-            print(classNames)
-            print(len(classNames))
-
-        modelConfiguration = 'yolov3.cfg'
-        modelWeights = 'yolov3.weights'
-
-        net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
-        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
         # Start the video playback
         self.play()
@@ -393,11 +474,18 @@ class ControllerGUI(QWidget):
 
             # Create a QImage from the resized frame
             image = QImage(
-                frame_rgb.data,
-                frame_rgb.shape[1],
-                frame_rgb.shape[0],
+                frame_rgb.data, #RGB image values
+                frame_rgb.shape[1], #Width
+                frame_rgb.shape[0], #Height
                 QImage.Format_RGB888
             )
+            #Center frame pixel
+            fX=int(frame_rgb.shape[1]/2)
+            fY=int(frame_rgb.shape[0]/2)
+            cv2.circle(frame_rgb, (fX,fY), 3, (255, 0, 0), -1)
+            cv2.putText(frame_rgb," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+           
+
             #Object Detect
             if Obj_flag ==1:
                 blob = cv2.dnn.blobFromImage(frame_rgb, 1/255, (whT,whT), [0,0,0], 1, crop=False)
@@ -410,6 +498,24 @@ class ControllerGUI(QWidget):
             if AR_flag == 1:
                 corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
                 aruco_display(corners, ids, rejected, frame_rgb)
+
+            #Testing team: AR marker tracking
+            if mode == 1:
+                if(abs(objX - frameX) > 30):
+                    difference = objX - frameX
+                    print('x difference: ' + str(difference))
+                    #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                    #print("current: " + str(current))
+                    if (difference < 10 and ids is not None):
+                        pass
+                        # #motor.WriteMotorData(1, 116, current - 10)
+                        # #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
+                    elif (difference > 10 and ids is not None):
+                        pass
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -424,21 +530,42 @@ class ControllerGUI(QWidget):
     def Input_Coord(self):
         # This method will be called when the button is clicked
         # It reads the text from the text boxes
-        text1 = self.textbox1.text()
-        text2 = self.textbox2.text()
-        text3 = self.textbox3.text()
+        X_inp = self.textbox1.text()
+        Y_inp = self.textbox2.text()
+        Z_inp = self.textbox3.text()
 
-        # Perform any desired actions with the text inputs
+        # Output terminal XYZ input
         if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
-            print("X:", text1)
             self.output_terminal.appendPlainText("X: ")
-            self.output_terminal.insertPlainText(str(text1))
-            print("Y:", text2)
+            self.output_terminal.insertPlainText(str(X_inp))
             self.output_terminal.appendPlainText("Y: ")
-            self.output_terminal.insertPlainText(str(text2))
-            print("Z:", text3)
+            self.output_terminal.insertPlainText(str(Y_inp))
             self.output_terminal.appendPlainText("Z: ")
-            self.output_terminal.insertPlainText(str(text3))
+            self.output_terminal.insertPlainText(str(Z_inp))
+
+        #From robotic arm code
+            forearm_mode = 0
+
+            claw_angle =  1
+
+
+            if (claw_angle == 0):
+                #motor.#motorRunWithInputs([90], [0])
+                pass
+            else:
+                #motor.#motorRunWithInputs([180], [0])
+                pass
+
+            coor = [X_inp,Y_inp,Z_inp]
+            #sangles = calculation.angle_Calc(coor, forearm_mode)
+            #print(angles)
+            
+            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
+            #motor.simMotorRun(angles, MOVE_IDs)
+
+
+            # #motor.#motorRunWithInputs([180], [0])
+            # #motor.#motorRunWithInputs([225], [0])
 
             # Clear the text boxes
             self.textbox1.clear()
@@ -447,6 +574,7 @@ class ControllerGUI(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
+    
     def Display(self):
         # Access flags
         global AR_flag
@@ -490,7 +618,56 @@ class ControllerGUI(QWidget):
             pass
         else:
             self.output_terminal.appendPlainText("Unknown button clicked")
+    
+    def Mode(self):
+            global mode
+            global AR_flag
+            # Create a QMessageBox
+            message_box = QMessageBox()
+            message_box.setWindowTitle("Toggle Arm mode")
+            message_box.setText("Choose an option:")
 
+            # Add buttons in the desired order
+            tracking_button = message_box.addButton("AR marker tracking", QMessageBox.AcceptRole)
+            TBD_button = message_box.addButton("TBD", QMessageBox.DestructiveRole)
+            cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
+
+            # Execute the message box
+            message_box.exec_()
+
+            # Get the role of the clicked button
+            clicked_button_role = message_box.buttonRole(message_box.clickedButton())
+
+            # Handle the clicked button
+            if clicked_button_role == QMessageBox.AcceptRole:
+                # Handle AR marker tracking
+                if mode == 1:
+                    self.output_terminal.appendPlainText("AR marker tracking: OFF")
+                    mode = 0
+                else:
+                    self.output_terminal.appendPlainText("AR Marker tracking: ON")
+                    if AR_flag == 0:
+                        AR_flag = 1
+                        self.output_terminal.appendPlainText("AR marker: ON")
+                    mode = 1
+            elif clicked_button_role == QMessageBox.DestructiveRole:
+                # Handle Object Detect option
+                if mode == 2:
+                    self.output_terminal.appendPlainText("Nothing happened")
+                    mode = 0
+                else:
+                    self.output_terminal.appendPlainText(".")
+                    mode = 2
+            elif clicked_button_role == QMessageBox.RejectRole:
+                # Handle Cancel option
+                pass
+            else:
+                self.output_terminal.appendPlainText("Unknown button clicked")
+    
+    def ResetPos(self):
+        self.output_terminal.appendPlainText("Moving to default position")
+        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        #motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
@@ -516,8 +693,6 @@ def main():
 
     # Run the application event loop
     app.exec_()
-
-    print("ok")
 
 if __name__=="__main__":
     main()
