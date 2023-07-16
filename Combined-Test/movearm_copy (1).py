@@ -160,9 +160,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 # cap.release()
 motor.portInitialization(PORT_NUM, ALL_IDs)
 motor.dxlSetVelo([20, 20, 20, 20, 20],[0, 1, 2, 3, 4])
-motor.motorRunWithInputs([180], [4])
-motor.motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
-
+motor.motorRunWithInputs([90, 227, 180, 177, 60], [0, 1, 2, 3, 4])
 # if __name__ == "__main__":
 while (MOVEARM_MODE):
         while cap.isOpened():
@@ -228,7 +226,7 @@ while (MOVEARM_MODE):
                  print('x difference: ' + str(difference))
                  print('y difference: ' + str(differenceZ))
                  current0 = motor._map(motor.ReadMotorData(0, 132), 0, 4095, 0, 360)
-                 current1 = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                 current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
                  current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
                  current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
                  current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
@@ -236,12 +234,20 @@ while (MOVEARM_MODE):
                      print("current ID0: " + str(current0) + " (Closed)")
                  else:
                      print("current ID0: " + str(current0) + " (Opened)") 
-                 print("current ID1: " + str(current1))
+                 print("current ID1: " + str(current))
                  print("current ID2: " + str(current2))
                  print("current ID3: " + str(current3))
                  print("current ID4: " + str(current4))
                  if (abs(differenceZ) > 60 and ids is not None):
-                    motor.motorRunWithInputs([(current2 + (differenceZ * (90/360))), (current3 - (differenceZ * (190/390))), (current4 + (differenceZ * (84/390)))], [2, 3, 4])
+                    motor.motorRunWithInputs([(current2 - (differenceZ/60)), (current3 - (differenceZ/60)), (current4 - (differenceZ/60))], [2, 3, 4])
+                 elif (difference < 10 and ids is not None):
+                    # motor.WriteMotorData(1, 116, current - 10)
+                    # motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
+                    motor.dxlSetVelo([37],[1])
+                    motor.motorRunWithInputs([current - difference/20], [1])
+                 elif (difference > 10 and ids is not None):
+                    motor.dxlSetVelo([37],[1])
+                    motor.motorRunWithInputs([current - difference/20], [1])
                 # Make sure it loops this part only once? Then, make sure it can reach for the object, using the y poition
                 # Variable: distance_feet_rounded 
                 # - Gives the distance from the AR Marker, to the camera
