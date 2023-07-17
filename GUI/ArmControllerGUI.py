@@ -34,6 +34,10 @@ objX = 0
 frameY = 0
 objY = 0
 
+x = 20
+y = 0
+z = -150
+
 #motor.portInitialization(PORT_NUM, ALL_IDs)
 #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
 #motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
@@ -269,12 +273,28 @@ class CustomButton(QPushButton):
 def ArrowMov(direction):
     if direction == 0:
         print("UP")
+        x += 2
+        coor = [x,y,z]
+        angles = calculation.angle_Calc(coor, 0)
+        print(angles)
     elif direction == 1:
         print("RIGHT")
+        z += 2
+        coor = [x,y,z]
+        angles = calculation.angle_Calc(coor, 0)
+        print(angles)
     elif direction == 2:
         print("DOWN")
+        x -= 2
+        coor = [x,y,z]
+        angles = calculation.angle_Calc(coor, 0)
+        print(angles)    
     elif direction == 3:
         print("LEFT")
+        z -= 2
+        coor = [x,y,z]
+        angles = calculation.angle_Calc(coor, 0)
+        print(angles)    
     else:
         print("Invalid direction:", direction)
 
