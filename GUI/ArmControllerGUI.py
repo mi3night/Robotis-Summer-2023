@@ -38,6 +38,9 @@ objY = 0
 #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
 #motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
 
+#numbers list
+numbers = []
+
 #Obj Detect setup
 classesFile = r'coco.txt'
 classNames = []
@@ -81,7 +84,7 @@ aruco_type = "DICT_5X5_100"
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
-def aruco_display(corners, ids, rejected, image):
+def aruco_display(corners, ids, rejected, image, self):
     if len(corners) > 0:
         ids = ids.flatten()
         
@@ -131,7 +134,15 @@ def aruco_display(corners, ids, rejected, image):
             #print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
             outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
             outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
-            
+
+            result = numbers.count(markerID)
+
+            if result > 0:
+                print("yes")
+            else:
+                print("no")
+                numbers.append(markerID)
+                print(numbers)
 
             cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
                 0.6, (255, 0, 255), 2)
@@ -402,6 +413,17 @@ class ControllerGUI(QWidget):
         layout3.addWidget(self.textbox3)
         layout3.setAlignment(label3, Qt.AlignRight)  # Align label3 to the right
 
+        #list of detected AR markers
+        self.ar_list = QComboBox(self)
+        self.ar_list.currentTextChanged.connect(self.markIDselect)
+
+
+        self.reset_list_button = QPushButton("Reset Detected List", self)
+        self.reset_list_button.clicked.connect(self.reset_list)
+
+        label5 = QLabel()
+
+        
         # Output terminal
         label4 = QLabel("Output Terminal:")
         self.output_terminal = QPlainTextEdit()
@@ -433,6 +455,9 @@ class ControllerGUI(QWidget):
         L_v_layout.setSpacing(10)
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
+        L_v_layout.addWidget(self.reset_list_button)
+        L_v_layout.addWidget(label5)
+        L_v_layout.addWidget(self.ar_list)
         L_v_layout.addWidget(self.ROBOTIS)
 
         # Middle layout
@@ -462,6 +487,18 @@ class ControllerGUI(QWidget):
 
         # Start the video playback
         self.play()
+
+    def markIDselect(self):
+        text = str(self.ar_list.currentText())
+
+
+    def reset_list(self):
+        self.ar_list.clear()
+        self.ar_list.addItem("STOP TRACKING")
+        for x in numbers:
+            self.ar_list.addItem(str(x))
+        numbers.clear()
+
 
     def play(self):
         whT = 320
@@ -497,7 +534,7 @@ class ControllerGUI(QWidget):
             #Aruco detect
             if AR_flag == 1:
                 corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
-                aruco_display(corners, ids, rejected, frame_rgb)
+                aruco_display(corners, ids, rejected, frame_rgb, self)
 
             #Testing team: AR marker tracking
             if mode == 1:
