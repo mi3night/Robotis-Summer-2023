@@ -1,14 +1,14 @@
 import cv2
 import numpy as np
 import os
-#import motorctrl_v1 as motor
-#import Movement_Calc_v2 as calculation
+import motorctrl_v1 as motor
+import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
 from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
 
 #Filepath for images and obj_detect setup
-os.chdir(r'cv2\GUI\icons')
+os.chdir(r'icons')
 
 #Toggle
 AR_flag = 0
@@ -27,7 +27,7 @@ BAUDRATE = 1000000
 MOVEARM_MODE = 1
 
 ALL_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
-MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
+MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID]
 
 frameX = 0
 objX = 0
@@ -38,12 +38,13 @@ x = 20
 y = 0
 z = -150
 
-#motor.portInitialization(PORT_NUM, ALL_IDs)
-#motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-#motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
+motor.portInitialization(PORT_NUM, ALL_IDs)
+motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+motor.motorRunWithInputs([228], [4])
+motor.motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
 
 #Obj Detect setup
-classesFile = r'coco.txt'
+classesFile = r'coco.names'
 classNames = []
 
 with open(classesFile, 'rt') as f:
@@ -120,7 +121,7 @@ def aruco_display(corners, ids, rejected, image):
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
             cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
-            #print("At pixel coordinates ({}, {})".format(cX,cY))
+            print("At pixel coordinates ({}, {})".format(cX,cY))
 
             # Calculate distance
             
@@ -132,7 +133,7 @@ def aruco_display(corners, ids, rejected, image):
             arY = distance_feet_rounded
             arX = round(arX, 4)
             arY = round(arY, 4)
-            #print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
+            print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
             outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
             outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
             
@@ -166,7 +167,7 @@ def findObjects(outputs,img):
                 center_x = int(x + w / 2)
                 center_y = int(y + h / 2)
                 centerPoints.append((center_x, center_y))
-    #print(len(bbox))
+    print(len(bbox))
     indices = cv2.dnn.NMSBoxes(bbox,confs,confThreshold,nmsThreshold)
 
     for i in indices:
@@ -271,30 +272,22 @@ class CustomButton(QPushButton):
         """)
 
 def ArrowMov(direction):
+    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+    current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
+    current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
+    current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
     if direction == 0:
         print("UP")
-        x += 2
-        coor = [x,y,z]
-        angles = calculation.angle_Calc(coor, 0)
-        print(angles)
+        motor.motorRunWithInputs([(current2 - 6.9), (current3 + 18), (current4 - 7)], [2, 3, 4])
     elif direction == 1:
         print("RIGHT")
-        z += 2
-        coor = [x,y,z]
-        angles = calculation.angle_Calc(coor, 0)
-        print(angles)
+        motor.motorRunWithInputs([current - 10], [1])
     elif direction == 2:
         print("DOWN")
-        x -= 2
-        coor = [x,y,z]
-        angles = calculation.angle_Calc(coor, 0)
-        print(angles)    
+        motor.motorRunWithInputs([(current2 + 6.9), (current3 - 18), (current4 + 10)], [2, 3, 4])    
     elif direction == 3:
         print("LEFT")
-        z -= 2
-        coor = [x,y,z]
-        angles = calculation.angle_Calc(coor, 0)
-        print(angles)    
+        motor.motorRunWithInputs([current + 10], [1])    
     else:
         print("Invalid direction:", direction)
 
@@ -524,18 +517,18 @@ class ControllerGUI(QWidget):
                 if(abs(objX - frameX) > 30):
                     difference = objX - frameX
                     print('x difference: ' + str(difference))
-                    #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                    #print("current: " + str(current))
+                    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                    print("current: " + str(current))
                     if (difference < 10 and ids is not None):
                         pass
-                        # #motor.WriteMotorData(1, 116, current - 10)
-                        # #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
-                        #motor.dxlSetVelo([37],[1])
-                        #motor.#motorRunWithInputs([current - difference/20], [1])
+                        motor.WriteMotorData(1, 116, current - 10)
+                        motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
+                        motor.dxlSetVelo([37],[1])
+                        motor.motorRunWithInputs([current - difference/20], [1])
                     elif (difference > 10 and ids is not None):
                         pass
-                        #motor.dxlSetVelo([37],[1])
-                        #motor.#motorRunWithInputs([current - difference/20], [1])
+                        motor.dxlSetVelo([37],[1])
+                        motor.motorRunWithInputs([current - difference/20], [1])
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -550,47 +543,36 @@ class ControllerGUI(QWidget):
     def Input_Coord(self):
         # This method will be called when the button is clicked
         # It reads the text from the text boxes
-        X_inp = self.textbox1.text()
-        Y_inp = self.textbox2.text()
-        Z_inp = self.textbox3.text()
+        x_inp = self.textbox1.text()
+        y_inp = self.textbox2.text()
+        z_inp = self.textbox3.text()
+        x_move = 0
+        y_move = 0
+        z_move = 0
 
         # Output terminal XYZ input
         if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
-            self.output_terminal.appendPlainText("X: ")
-            self.output_terminal.insertPlainText(str(X_inp))
-            self.output_terminal.appendPlainText("Y: ")
-            self.output_terminal.insertPlainText(str(Y_inp))
-            self.output_terminal.appendPlainText("Z: ")
-            self.output_terminal.insertPlainText(str(Z_inp))
-
+            motor.portInitialization(PORT_NUM, ALL_IDs)
+            x_move = int(x_inp)
+            y_move = int(y_inp)
+            z_move = int(z_inp)
         #From robotic arm code
-            forearm_mode = 0
-
-            claw_angle =  1
-
-
-            if (claw_angle == 0):
-                #motor.#motorRunWithInputs([90], [0])
-                pass
-            else:
-                #motor.#motorRunWithInputs([180], [0])
-                pass
-
-            coor = [X_inp,Y_inp,Z_inp]
-            #sangles = calculation.angle_Calc(coor, forearm_mode)
-            #print(angles)
-            
-            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
-            #motor.simMotorRun(angles, MOVE_IDs)
-
-
-            # #motor.#motorRunWithInputs([180], [0])
-            # #motor.#motorRunWithInputs([225], [0])
+            coor = [x_move,y_move,z_move]
+            angles = calculation.angle_Calc(coor, 0)
+            print(angles)
+            motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
+            motor.simMotorRun(angles, MOVE_IDs)
 
             # Clear the text boxes
             self.textbox1.clear()
             self.textbox2.clear()
             self.textbox3.clear()
+            self.output_terminal.appendPlainText("X: ")
+            self.output_terminal.insertPlainText(str(x_inp))
+            self.output_terminal.appendPlainText("Y: ")
+            self.output_terminal.insertPlainText(str(y_inp))
+            self.output_terminal.appendPlainText("Z: ")
+            self.output_terminal.insertPlainText(str(z_inp))
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
@@ -686,8 +668,9 @@ class ControllerGUI(QWidget):
     
     def ResetPos(self):
         self.output_terminal.appendPlainText("Moving to default position")
-        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-        #motor.#motorRunWithInputs([90, 227, 273, 47, 180], [0, 1, 2, 3, 4])
+        motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        motor.motorRunWithInputs([227], [4])
+        motor.motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
