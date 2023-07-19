@@ -497,6 +497,11 @@ class ControllerGUI(QWidget):
         L_v_layout.addStretch()
         L_v_layout.setSpacing(10)
         L_v_layout.addWidget(self.Stop_button)
+        L_v_layout.addLayout(mot1)
+        L_v_layout.addLayout(mot2)
+        L_v_layout.addLayout(mot3)
+        L_v_layout.addLayout(mot4)
+        L_v_layout.addLayout(mot5)
         L_v_layout.addWidget(self.R_button)
         L_v_layout.addWidget(self.ROBOTIS)
 
