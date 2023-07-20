@@ -265,14 +265,22 @@ class CustomButton(QPushButton):
         """)
 
 def ArrowMov(direction):
+    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+    current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
+    current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
+    current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
     if direction == 0:
         print("UP")
+        motor.motorRunWithInputs([(current2 - 6.9), (current3 + 18), (current4 - 7)], [2, 3, 4])
     elif direction == 1:
         print("RIGHT")
+        motor.motorRunWithInputs([current - 10], [1])
     elif direction == 2:
         print("DOWN")
+        motor.motorRunWithInputs([(current2 + 6.9), (current3 - 18), (current4 + 10)], [2, 3, 4])    
     elif direction == 3:
         print("LEFT")
+        motor.motorRunWithInputs([current + 10], [1])    
     else:
         print("Invalid direction:", direction)
 
