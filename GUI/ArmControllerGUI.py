@@ -337,7 +337,7 @@ class ControllerGUI(QWidget):
         self.R_button.clicked.connect(self.ResetPos)
         
         self.activity_status = QPushButton(self)
-        self.activity_status.setFixedWidth (200)
+        self.activity_status.setFixedWidth(200)
         self.activity_status.setStyleSheet("border: 1px solid black;")
         self.activity_status.setText(state)
 
