@@ -5,7 +5,7 @@ import motorctrl_v1 as motor
 import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy, QComboBox
 
 #Filepath for images and obj_detect setup
 os.chdir(r'icons')
@@ -346,7 +346,7 @@ class ControllerGUI(QWidget):
         self.R_button = CustomButton("Reset")
         self.R_button.setFixedWidth(200)
         self.R_button.clicked.connect(self.ResetPos)
-        
+
         self.activity_status = QPushButton(self)
         self.activity_status.setFixedWidth(100)
         self.activity_status.setStyleSheet("border: 1px solid black;")
@@ -473,8 +473,8 @@ class ControllerGUI(QWidget):
         L_v_layout.setSpacing(10)
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
-        L_v_layout.addWidget(self.activity_status)
         L_v_layout.addWidget(self.reset_list_button)
+        L_v_layout.addWidget(self.activity_status)
         L_v_layout.addWidget(label5)
         L_v_layout.addWidget(self.ar_list)
         L_v_layout.addWidget(self.ROBOTIS)
@@ -619,7 +619,6 @@ class ControllerGUI(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
-
         def statuscheck():
 
             global state
@@ -636,6 +635,8 @@ class ControllerGUI(QWidget):
             else:
                 state = 'error'
                 return(state)
+            
+        QTimer.singleShot(15, statuscheck)
             
         statuscheck()
     
