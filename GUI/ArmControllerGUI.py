@@ -335,6 +335,10 @@ class ControllerGUI(QWidget):
         self.R_button = CustomButton("Reset")
         self.R_button.setFixedWidth(200)
         self.R_button.clicked.connect(self.ResetPos)
+        
+        self.activity_status = QPushButton(self)
+        self.activity_status.setStyleSheet("border: 1px solid black;")
+        self.activity_status.setText(state)
 
         self.Disp_button = CustomButton("Display")
         self.Disp_button.setFixedWidth(200)
@@ -446,6 +450,7 @@ class ControllerGUI(QWidget):
         L_v_layout.setSpacing(10)
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
+        L_v_layout.addWidget(self.activity_status)
         L_v_layout.addWidget(self.ROBOTIS)
 
         # Middle layout
@@ -576,6 +581,25 @@ class ControllerGUI(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
+
+        def statuscheck():
+
+            global state
+            state = None
+
+            if motor.motor_status == 0:
+                state = 'stationary..'
+                return (state)
+    
+            elif motor.motor_status == 1:
+                state = 'running..'
+                return (state)
+    
+            else:
+                state = 'error'
+                return(state)
+            
+        statuscheck()
     
     def Display(self):
         # Access flags
