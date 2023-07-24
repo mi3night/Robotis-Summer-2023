@@ -506,7 +506,7 @@ class ControllerGUI(QWidget):
 
         # Start the video playback
         self.play()
-
+        self.statuscheck()
     def markIDselect(self):
         text = str(self.ar_list.currentText())
 
@@ -622,23 +622,18 @@ class ControllerGUI(QWidget):
         def statuscheck():
 
             global state
-            state = None
 
             if motor.motor_status == 0:
                 state = 'stationary..'
-                return (state)
     
             elif motor.motor_status == 1:
                 state = 'running..'
-                return (state)
     
             else:
                 state = 'error'
-                return(state)
             
-        QTimer.singleShot(15, statuscheck)
+            QTimer.singleShot(15, statuscheck)
             
-        statuscheck()
     
     def Display(self):
         # Access flags
