@@ -1,14 +1,18 @@
 import cv2
 import numpy as np
 import os
-import motorctrl_v1 as motor
-import Movement_Calc_v2 as calculation
+#import #motorctrl_v1 as #motor
+#import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy, QComboBox
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QComboBox
 
 #Filepath for images and obj_detect setup
-os.chdir(r'icons')
+os.chdir(r'cv2\GUI\icons')
+#AR/Object menu
+numbers = []
+
+state= 'Idle'
 
 #Toggle
 AR_flag = 0
@@ -27,27 +31,20 @@ BAUDRATE = 1000000
 MOVEARM_MODE = 1
 
 ALL_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
-MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID]
+MOVE_IDs = [BASE_ID, BICEP_ID, FOREARM_ID, WRIST_ID, CLAW_ID]
 
 frameX = 0
 objX = 0
 frameY = 0
 objY = 0
 
-x = 20
-y = 0
-z = -150
-
-motor.portInitialization(PORT_NUM, ALL_IDs)
-motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-motor.motorRunWithInputs([228], [4])
-motor.motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
-
-#numbers list
-numbers = []
+#motor.portInitialization(PORT_NUM, ALL_IDs)
+#motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+#motor.#motorRunWithInputs([180], [4])
+#motor.#motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
 
 #Obj Detect setup
-classesFile = r'coco.names'
+classesFile = r'coco.txt'
 classNames = []
 
 with open(classesFile, 'rt') as f:
@@ -89,7 +86,7 @@ aruco_type = "DICT_5X5_100"
 arucoDict = cv2.aruco.Dictionary_get(ARUCO_DICT[aruco_type])
 arucoParams = cv2.aruco.DetectorParameters_create()
 
-def aruco_display(corners, ids, rejected, image, self):
+def aruco_display(corners, ids, rejected, image,self):
     if len(corners) > 0:
         ids = ids.flatten()
         
@@ -124,10 +121,8 @@ def aruco_display(corners, ids, rejected, image, self):
             cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
             objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
             cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
-            print("At pixel coordinates ({}, {})".format(cX,cY))
 
             # Calculate distance
-            
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
             distance_feet, distance_per_pixel = calculate_distance(marker_size)
             distance_feet_rounded = round(distance_feet, 2)
@@ -136,9 +131,13 @@ def aruco_display(corners, ids, rejected, image, self):
             arY = distance_feet_rounded
             arX = round(arX, 4)
             arY = round(arY, 4)
-            print("[Inference] ArUco marker ID: {}, Distance: {} feet, Distance per pixel: {} feet/pixel\n, X coord: {}, Y coord: {}\n".format(markerID, distance_feet_rounded, distance_per_pixel_rounded, arX, arY))
             outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
             outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
+            
+
+            cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                0.6, (255, 0, 255), 2)
+            cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
 
             result = numbers.count(markerID)
 
@@ -149,9 +148,6 @@ def aruco_display(corners, ids, rejected, image, self):
                 numbers.append(markerID)
                 print(numbers)
 
-            cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                0.6, (255, 0, 255), 2)
-            cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
     return image
 
 def findObjects(outputs,img):
@@ -178,7 +174,7 @@ def findObjects(outputs,img):
                 center_x = int(x + w / 2)
                 center_y = int(y + h / 2)
                 centerPoints.append((center_x, center_y))
-    print(len(bbox))
+
     indices = cv2.dnn.NMSBoxes(bbox,confs,confThreshold,nmsThreshold)
 
     for i in indices:
@@ -283,22 +279,22 @@ class CustomButton(QPushButton):
         """)
 
 def ArrowMov(direction):
-    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-    current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
-    current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
-    current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
+    # current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+    # current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
+    # current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
+    # current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
     if direction == 0:
         print("UP")
-        motor.motorRunWithInputs([(current2 - 6.9), (current3 + 18), (current4 - 7)], [2, 3, 4])
+        #motor.motorRunWithInputs([(current2 - 6.9), (current3 + 18), (current4 - 7)], [2, 3, 4])
     elif direction == 1:
         print("RIGHT")
-        motor.motorRunWithInputs([current - 10], [1])
+        #motor.motorRunWithInputs([current - 10], [1])
     elif direction == 2:
         print("DOWN")
-        motor.motorRunWithInputs([(current2 + 6.9), (current3 - 18), (current4 + 10)], [2, 3, 4])    
+        #motor.motorRunWithInputs([(current2 + 6.9), (current3 - 18), (current4 + 10)], [2, 3, 4])    
     elif direction == 3:
         print("LEFT")
-        motor.motorRunWithInputs([current + 10], [1])    
+        #motor.motorRunWithInputs([current + 10], [1])    
     else:
         print("Invalid direction:", direction)
 
@@ -306,7 +302,7 @@ class ControllerGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
-        self.setGeometry(50, 50, 1000, 800)  # Set the window size to 800x800 pixels
+        self.setGeometry(50, 50, 1000, 800)  # Set the window size to 1000x800 pixels
 
         # Create a QLabel to display the video feed
         self.video_label = QLabel(self)
@@ -348,7 +344,6 @@ class ControllerGUI(QWidget):
         self.R_button.clicked.connect(self.ResetPos)
 
         self.activity_status = QPushButton(self)
-        self.activity_status.setFixedWidth(100)
         self.activity_status.setStyleSheet("border: 1px solid black;")
         self.activity_status.setText(state)
 
@@ -411,6 +406,15 @@ class ControllerGUI(QWidget):
         button_grid.addWidget(toggle_left, 2,0)
         button_grid.setSpacing(2)
 
+        #list of detected AR markers
+        self.ar_list = QComboBox(self)
+        self.ar_list.currentTextChanged.connect(self.markIDselect)
+
+
+        self.reset_list_button = QPushButton("Reset Detected List", self)
+        self.reset_list_button.clicked.connect(self.reset_list)
+
+        label5 = QLabel()
 
         # Create a QHBoxLayout for each label and textbox pair
         layout1 = QHBoxLayout()
@@ -431,17 +435,6 @@ class ControllerGUI(QWidget):
         layout3.addWidget(self.textbox3)
         layout3.setAlignment(label3, Qt.AlignRight)  # Align label3 to the right
 
-        #list of detected AR markers
-        self.ar_list = QComboBox(self)
-        self.ar_list.currentTextChanged.connect(self.markIDselect)
-
-
-        self.reset_list_button = QPushButton("Reset Detected List", self)
-        self.reset_list_button.clicked.connect(self.reset_list)
-
-        label5 = QLabel()
-
-        
         # Output terminal
         label4 = QLabel("Output Terminal:")
         self.output_terminal = QPlainTextEdit()
@@ -454,10 +447,77 @@ class ControllerGUI(QWidget):
                                             "selection-background-color: white;")
         self.output_terminal.setMaximumWidth(800)
 
+        # Create QLineEdit widgets for updating Motors
+        self.motor1 = QLineEdit(self)
+        self.motor1.setReadOnly(True)
+        self.motor1.setFixedWidth(100)
+
+        self.motor2 = QLineEdit(self)
+        self.motor2.setReadOnly(True)
+        self.motor2.setFixedWidth(100)
+
+        self.motor3 = QLineEdit(self)
+        self.motor3.setReadOnly(True)
+        self.motor3.setFixedWidth(100)
+
+        self.motor4 = QLineEdit(self)
+        self.motor4.setReadOnly(True)
+        self.motor4.setFixedWidth(100)
+
+        self.motor5 = QLineEdit(self)
+        self.motor5.setReadOnly(True)
+        self.motor5.setFixedWidth(100)
+
+
+        # Create QLabel widgets for the text box labels
+        angLabel = QLabel("Motor Angles")
+        M1 = QLabel("Motor[1]")
+        M2 = QLabel("Motor[2]")
+        M3 = QLabel("Motor[3]")
+        M4 = QLabel("Motor[4]")
+        M5 = QLabel("Motor[5]")
+
+        # Create a QHBoxLayout for each #motor and textbox pair
+        mot1 = QHBoxLayout()
+        mot1.setSpacing(5)
+        mot1.addWidget(M1)
+        mot1.addWidget(self.motor1)
+        mot1.setAlignment(M1, Qt.AlignRight)  
+
+        mot2 = QHBoxLayout()
+        mot2.setSpacing(5)
+        mot2.addWidget(M2)
+        mot2.addWidget(self.motor2)
+        mot2.setAlignment(M2, Qt.AlignRight)  
+
+        mot3 = QHBoxLayout()
+        mot3.setSpacing(5)
+        mot3.addWidget(M3)
+        mot3.addWidget(self.motor3)
+        mot3.setAlignment(M3, Qt.AlignRight) 
+        
+        mot4 = QHBoxLayout()
+        mot4.setSpacing(5)
+        mot4.addWidget(M4)
+        mot4.addWidget(self.motor4)
+        mot4.setAlignment(M4, Qt.AlignRight) 
+
+        mot5 = QHBoxLayout()
+        mot5.setSpacing(5)
+        mot5.addWidget(M5)
+        mot5.addWidget(self.motor5)
+        mot5.setAlignment(M5, Qt.AlignRight) 
+
         # Right side Vertical Layout
         R_v_layout = QVBoxLayout()
         R_v_layout.addStretch()
         R_v_layout.setSpacing(10)  # Set the spacing between items to 10 pixels
+        R_v_layout.addWidget(angLabel)
+        R_v_layout.addLayout(mot1)
+        R_v_layout.addLayout(mot2)
+        R_v_layout.addLayout(mot3)
+        R_v_layout.addLayout(mot4)
+        R_v_layout.addLayout(mot5)
         R_v_layout.addWidget(self.Disp_button)
         R_v_layout.addWidget(self.Mode_button)
         R_v_layout.addLayout(layout1)
@@ -473,8 +533,8 @@ class ControllerGUI(QWidget):
         L_v_layout.setSpacing(10)
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
-        L_v_layout.addWidget(self.reset_list_button)
         L_v_layout.addWidget(self.activity_status)
+        L_v_layout.addWidget(self.reset_list_button)
         L_v_layout.addWidget(label5)
         L_v_layout.addWidget(self.ar_list)
         L_v_layout.addWidget(self.ROBOTIS)
@@ -506,18 +566,6 @@ class ControllerGUI(QWidget):
 
         # Start the video playback
         self.play()
-        self.statuscheck()
-    def markIDselect(self):
-        text = str(self.ar_list.currentText())
-
-
-    def reset_list(self):
-        self.ar_list.clear()
-        self.ar_list.addItem("STOP TRACKING")
-        for x in numbers:
-            self.ar_list.addItem(str(x))
-        numbers.clear()
-
 
     def play(self):
         whT = 320
@@ -554,24 +602,43 @@ class ControllerGUI(QWidget):
             if AR_flag == 1:
                 corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
                 aruco_display(corners, ids, rejected, frame_rgb, self)
+            
+            #Update Motor values
+            try:
+                pass
+                #motor_ids = [0,1,2,3,4]
+                #angles = #motor.dxlPresAngle(#motor_ids)
+                #self.motor1.setText(str(angles[0]))
+                #self.motor2.setText(str(angles[1]))
+                #self.motor3.setText(str(angles[2]))
+                #self.motor4.setText(str(angles[3]))
+                #self.motor5.setText(str(angles[4]))
+            except:
+                self.motor1.setText("")
+                self.motor2.setText("")
+                self.motor3.setText("")
+                self.motor4.setText("")
+                self.motor5.setText("")
 
             #Testing team: AR marker tracking
             if mode == 1:
                 if(abs(objX - frameX) > 30):
                     difference = objX - frameX
                     print('x difference: ' + str(difference))
-                    current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                    print("current: " + str(current))
+                    #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                    #print("current: " + str(current))
                     if (difference < 10 and ids is not None):
+                        #motor.WriteMotorData(1, 116, current - 10)
+                        #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
                         pass
-                        motor.WriteMotorData(1, 116, current - 10)
-                        motor.motor_check(1,motor._map(current - 10 , 0, 360, 0, 4095))
-                        motor.dxlSetVelo([37],[1])
-                        motor.motorRunWithInputs([current - difference/20], [1])
+
                     elif (difference > 10 and ids is not None):
+                        #motor.dxlSetVelo([37],[1])
+                        #motor.#motorRunWithInputs([current - difference/20], [1])
                         pass
-                        motor.dxlSetVelo([37],[1])
-                        motor.motorRunWithInputs([current - difference/20], [1])
+
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
@@ -583,58 +650,55 @@ class ControllerGUI(QWidget):
         # Call the play method again after 15 milliseconds (change the delay as needed)
         QTimer.singleShot(15, self.play)
 
+    def markIDselect(self):
+        text = str(self.ar_list.currentText())
+
+
+    def reset_list(self):
+        self.ar_list.clear()
+        self.ar_list.addItem("STOP TRACKING")
+        for x in numbers:
+            self.ar_list.addItem(str(x))
+        numbers.clear()
+
+
+
     def Input_Coord(self):
         # This method will be called when the button is clicked
         # It reads the text from the text boxes
-        x_inp = self.textbox1.text()
-        y_inp = self.textbox2.text()
-        z_inp = self.textbox3.text()
-        x_move = 0
-        y_move = 0
-        z_move = 0
+        X_inp = self.textbox1.text()
+        Y_inp = self.textbox2.text()
+        Z_inp = self.textbox3.text()
 
         # Output terminal XYZ input
         if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
-            motor.portInitialization(PORT_NUM, ALL_IDs)
-            x_move = int(x_inp)
-            y_move = int(y_inp)
-            z_move = int(z_inp)
+            self.output_terminal.appendPlainText("X: ")
+            self.output_terminal.insertPlainText(str(X_inp))
+            self.output_terminal.appendPlainText("Y: ")
+            self.output_terminal.insertPlainText(str(Y_inp))
+            self.output_terminal.appendPlainText("Z: ")
+            self.output_terminal.insertPlainText(str(Z_inp))
+
         #From robotic arm code
-            coor = [x_move,y_move,z_move]
-            angles = calculation.angle_Calc(coor, 0)
-            print(angles)
-            motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
-            motor.simMotorRun(angles, MOVE_IDs)
+            forearm_mode = 0
+            #motor.#motorRunWithInputs([180], [0])
+
+            coor = [X_inp,Y_inp,Z_inp]
+            #angles = calculation.angle_Calc(coor, forearm_mode)
+            
+            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
+            #motor.simMotorRun(angles, MOVE_IDs)
+
 
             # Clear the text boxes
             self.textbox1.clear()
             self.textbox2.clear()
             self.textbox3.clear()
-            self.output_terminal.appendPlainText("X: ")
-            self.output_terminal.insertPlainText(str(x_inp))
-            self.output_terminal.appendPlainText("Y: ")
-            self.output_terminal.insertPlainText(str(y_inp))
-            self.output_terminal.appendPlainText("Z: ")
-            self.output_terminal.insertPlainText(str(z_inp))
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
-        def statuscheck(self):
 
-            global state
 
-            if motor.motor_status == 0:
-                state = 'stationary..'
-    
-            elif motor.motor_status == 1:
-                state = 'running..'
-    
-            else:
-                state = 'error'
-            
-            QTimer.singleShot(15, self.statuscheck)
-            
-    
     def Display(self):
         # Access flags
         global AR_flag
@@ -726,9 +790,9 @@ class ControllerGUI(QWidget):
     
     def ResetPos(self):
         self.output_terminal.appendPlainText("Moving to default position")
-        motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-        motor.motorRunWithInputs([227], [4])
-        motor.motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
+        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        #motor.#motorRunWithInputs([180], [4])
+        #motor.#motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
 
     def closeEvent(self, event):
         # Release the video source when the window is closed
@@ -740,6 +804,21 @@ class ControllerGUI(QWidget):
             event.accept()
         else:
             event.ignore()
+    def statuscheck(self):
+
+        global state
+        state = None
+
+        # if motor.motor_status == 0:
+        #     state = 'stationary..'
+
+        # elif motor.motor_status == 1:
+        #     state = 'running..'
+
+        # else:
+        #     state = 'error'
+            
+        QTimer.singleShot(15, self.statuscheck)
 
 
 def main():
