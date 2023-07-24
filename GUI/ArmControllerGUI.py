@@ -622,23 +622,25 @@ class ControllerGUI(QWidget):
 
             #Testing team: AR marker tracking
             if mode == 1:
-                if(abs(objX - frameX) > 30):
-                    difference = objX - frameX
-                    print('x difference: ' + str(difference))
-                    #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                    #print("current: " + str(current))
-                    if (difference < 10 and ids is not None):
-                        #motor.WriteMotorData(1, 116, current - 10)
-                        #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
-                        #motor.dxlSetVelo([37],[1])
-                        #motor.#motorRunWithInputs([current - difference/20], [1])
-                        pass
-
-                    elif (difference > 10 and ids is not None):
-                        #motor.dxlSetVelo([37],[1])
-                        #motor.#motorRunWithInputs([current - difference/20], [1])
-                        pass
-
+                if self.IDmarker == str(self.ar_list.currentText()):
+                    if(abs(objX - frameX) > 30):
+                        difference = objX - frameX
+                        print('x difference: ' + str(difference))
+                        #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                        #print("current: " + str(current))
+                        if (difference < 10 and ids is not None):
+                            #motor.WriteMotorData(1, 116, current - 10)
+                            #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
+                            #motor.dxlSetVelo([37],[1])
+                            #motor.#motorRunWithInputs([current - difference/20], [1])
+                            pass
+    
+                        elif (difference > 10 and ids is not None):
+                            #motor.dxlSetVelo([37],[1])
+                            #motor.#motorRunWithInputs([current - difference/20], [1])
+                            pass
+                        self.output_terminal.appendPlainText("Tracking ")
+                        self.output_terminal.insertPlainText(str(self.IDmarker))
 
             # Create a QPixmap from the QImage
             pixmap = QPixmap.fromImage(image)
