@@ -565,7 +565,8 @@ class ControllerGUI(QWidget):
 
         # Open the video source
         self.capture = cv2.VideoCapture(0)
-
+        # Initialize ID marker  attribute
+        self.IDmarker = 0
         # Start the video playback
         self.play()
 
