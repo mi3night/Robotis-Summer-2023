@@ -141,6 +141,8 @@ def aruco_display(corners, ids, rejected, image,self):
 
             result = numbers.count(markerID)
 
+            self.IDmarker = str(markerID)
+            
             if result > 0:
                 print("yes")
             else:
