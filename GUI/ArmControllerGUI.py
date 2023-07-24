@@ -619,7 +619,7 @@ class ControllerGUI(QWidget):
         else:
             no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
             QMessageBox.Retry)
-        def statuscheck():
+        def statuscheck(self):
 
             global state
 
@@ -632,7 +632,7 @@ class ControllerGUI(QWidget):
             else:
                 state = 'error'
             
-            QTimer.singleShot(15, statuscheck)
+            QTimer.singleShot(15, self.statuscheck)
             
     
     def Display(self):
