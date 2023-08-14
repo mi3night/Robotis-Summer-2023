@@ -1,19 +1,21 @@
 import cv2
 import numpy as np
 import os
+import json
 #import #motorctrl_v1 as #motor
 #import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
-from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon, QKeySequence, QKeyEvent
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy, QComboBox, QMenuBar, QTabWidget, QListWidget, QTableWidget, QFrame, QHeaderView, QColumnView, QAbstractItemView, QTableWidgetItem
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
+from PyQt5.QtWidgets import QDialog,QListWidget,QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy, QComboBox, QMenuBar, QTabWidget, QListWidget, QTableWidget, QFrame, QHeaderView, QColumnView, QAbstractItemView, QTableWidgetItem
 
 #Filepath for images and obj_detect setup
 os.chdir(r'cv2\GUI\icons')
 #AR/Object menu
-numbers = []
-
+AR_numbers = []
+objects = []
 state= 'Idle'
-
+#load old save
+saved_assignments = []
 #Toggle
 AR_flag = 0
 Obj_flag = 0
@@ -57,6 +59,20 @@ net = cv2.dnn.readNetFromDarknet(modelConfiguration,modelWeights)
 net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
+def save_data(full_data):
+
+        with open("testsave.json", "w") as json_file:
+            json.dump(full_data, json_file)
+def load_data():
+    try:
+        with open("testsave.json", "r") as json_file:
+            old_data = json.load(json_file)
+            return old_data
+    except:
+        return []
+
+
+
 ARUCO_DICT = {
     "DICT_4X4_50": cv2.aruco.DICT_4X4_50,
     "DICT_4X4_100": cv2.aruco.DICT_4X4_100,
@@ -99,11 +115,6 @@ def aruco_display(corners, ids, rejected, image,self):
             bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
             topLeft = (int(topLeft[0]), int(topLeft[1]))
 
-            cv2.line(image, topLeft, topRight, (255, 0, 255), 2)
-            cv2.line(image, topRight, bottomRight, (255, 0, 255), 2)
-            cv2.line(image, bottomRight, bottomLeft, (255, 0, 255), 2)
-            cv2.line(image, bottomLeft, topLeft, (255, 0, 255), 2)
-
             #Object's center pixel coordinates    
             h,w,_ = image.shape
             global objX
@@ -118,9 +129,6 @@ def aruco_display(corners, ids, rejected, image,self):
             objX = cX
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
             objY = cY
-            cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
-            objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
-            cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
 
             # Calculate distance
             marker_size = np.linalg.norm(np.array(topRight) - np.array(topLeft))
@@ -131,24 +139,54 @@ def aruco_display(corners, ids, rejected, image,self):
             arY = distance_feet_rounded
             arX = round(arX, 4)
             arY = round(arY, 4)
-            outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
-            outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
-            
 
-            cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                0.6, (255, 0, 255), 2)
-            cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+            #AR marker outline display
+            if AR_flag ==1:
+                #Perimeter
+                cv2.line(image, topLeft, topRight, (255, 0, 255), 2)
+                cv2.line(image, topRight, bottomRight, (255, 0, 255), 2)
+                cv2.line(image, bottomRight, bottomLeft, (255, 0, 255), 2)
+                cv2.line(image, bottomLeft, topLeft, (255, 0, 255), 2)
+                cv2.circle(image, (cX, cY), 4, (0, 0, 255), -1)
+                objectCord = "(" + str(cX) + ", " + str(cY) + ")" 
+                cv2.putText(image, objectCord, (cX,cY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,0,255), 2)
+                
+                #Distance
+                outlineText = "ID: " + str(markerID) + " at " +  str(distance_feet_rounded) + " feet, " +  str(distance_per_pixel_rounded) + " ft/pixel" 
+                outlineText2 = "X Axis: " + str(arX) + " Y Axis: " + str(arY)   
 
-            result = numbers.count(markerID)
+                #Outline text info
+                cv2.putText(image, outlineText,(topLeft[0], topLeft[1] - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.6, (255, 0, 255), 2)
+                cv2.putText(image, outlineText2, (topLeft[0], topLeft[1] + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
 
-            self.IDmarker = str(markerID)
-            
+            result = AR_numbers.count(markerID)
+            IDmarker = str(markerID)
+
             if result > 0:
-                print("yes")
+                pass
             else:
-                print("no")
-                numbers.append(markerID)
-                print(numbers)
+                # Initialize AR_package with default values
+                try:
+                    motor_ids = [0, 1, 2, 3, 4]
+                    angles = motor.dxlPresAngle(motor_ids)
+                    AR_package = {"id": IDmarker, "motor0": angles[0], "motor1": angles[1], "motor2": angles[2], "motor3": angles[3], "motor4": angles[4]}
+                except:
+                    AR_package = {"id": IDmarker, "motor0": 0, "motor1": 0, "motor2": 0, "motor3": 0, "motor4": 0}
+
+                # Check if IDmarker already exists in AR_numbers
+                marker_exists = False
+                for item in AR_numbers:
+                    if IDmarker == item.get("id"):
+                        marker_exists = True
+                        break
+
+                if not marker_exists:
+                    # IDmarker is unique, add a new AR_package to AR_numbers
+                    AR_numbers.append(AR_package)
+
+
+
 
     return image
 
@@ -180,14 +218,46 @@ def findObjects(outputs,img):
     indices = cv2.dnn.NMSBoxes(bbox,confs,confThreshold,nmsThreshold)
 
     for i in indices:
-        box = bbox[i]
-        x, y, w, h = box[0], box[1], box[2], box[3]
-        cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 255), 2)
-        cv2.putText(img, f'{classNames[classIds[i]].upper()} {int(confs[i]*100)}%', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
-        center_x, center_y = centerPoints[i]
-        cv2.circle(img, (center_x, center_y), 5, (0, 255, 0), -1)
-        text = f'({center_x}, {center_y})'
-        cv2.putText(img, text, (center_x - 20, center_y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        #Obj outline display
+        if Obj_flag == 1:
+            box = bbox[i]
+            x, y, w, h = box[0], box[1], box[2], box[3]
+            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 255), 2)
+            cv2.putText(img, f'{classNames[classIds[i]].upper()} {int(confs[i]*100)}%', (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+            center_x, center_y = centerPoints[i]
+            cv2.circle(img, (center_x, center_y), 5, (0, 255, 0), -1)
+            text = f'({center_x}, {center_y})'
+            cv2.putText(img, text, (center_x - 20, center_y - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        
+        #Check object list
+        objName = classNames[classIds[i]]
+        if objName in objects:
+            #Look for AR marker assigned to object
+            try:
+                for item in saved_assignments:
+                    if objName == item.get("Obj"):
+                        id = item.get("AR")
+
+                        #Grab object
+                        #...
+
+                        #Move to AR basket
+                        for item in AR_numbers:
+                            if item == id:
+                                motor.motorRunWithInputs([item["motor0"],item["motor1"],item["motor2"],item["motor3"],item["motor4"]], [0,1,2,3,4])
+
+                        #Drop
+                        #...
+
+            except:
+                pass
+        else:
+            #Add new object to objects list
+            objects.append(classNames[classIds[i]])
+
+
+
+
 
 def calculate_distance(marker_size):
     # Constants for your specific camera setup
@@ -258,6 +328,7 @@ class ToggleButton(QPushButton):
             """)
 
 
+
 class CustomButton(QPushButton):
     def __init__(self, text):
         super().__init__(text)
@@ -280,25 +351,40 @@ class CustomButton(QPushButton):
             }
         """)
 
-def ArrowMov(direction):
+def ArrowMov(direction,self):
+    global state
     # current = motor._map(motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
     # current2 = motor._map(motor.ReadMotorData(2, 132), 0, 4095, 0, 360)
     # current3 = motor._map(motor.ReadMotorData(3, 132), 0, 4095, 0, 360)
     # current4 = motor._map(motor.ReadMotorData(4, 132), 0, 4095, 0, 360)
     if direction == 0:
+        state='running..'
+        self.statetext()
         print("UP")
         #motor.motorRunWithInputs([(current2 - 6.9), (current3 + 18), (current4 - 7)], [2, 3, 4])
     elif direction == 1:
+        state='running..'
+        self.statetext()
         print("RIGHT")
         #motor.motorRunWithInputs([current - 10], [1])
     elif direction == 2:
+        state='running..'
+        self.statetext()
         print("DOWN")
         #motor.motorRunWithInputs([(current2 + 6.9), (current3 - 18), (current4 + 10)], [2, 3, 4])    
     elif direction == 3:
+        state='running..'
+        self.statetext()
         print("LEFT")
         #motor.motorRunWithInputs([current + 10], [1])    
     else:
+        state='error'
+        self.statetext(self)
         print("Invalid direction:", direction)
+    # Reset the timer whenever the text is changed by the user
+    self.timer.start()
+
+saved_assignments = load_data()
 
 class HelpWindow(QWidget):
     def __init__(self):
@@ -379,7 +465,7 @@ class HelpWindow(QWidget):
         help_box.setRowHeight(10, 8)
 
         buttonsfunctiontab.setLayout(buttons_layout)
-        
+
         tab_widget.addTab(buttonsfunctiontab, "Button Functions")
 
         main_layout = QVBoxLayout()
@@ -388,22 +474,387 @@ class HelpWindow(QWidget):
 
         self.setLayout(main_layout)
 
+
 class ControllerGUI(QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
+        self.setGeometry(50, 50, 1000, 800)  # Set the window size to 1000x800 pixels
+        self.GUI = None
 
-        self.GUI = None  
-
+        #Initialize Layout
+        self.layout_init()
+        
         #menubar
         menubar = QMenuBar(self)
         help_menu = menubar.addMenu('Help')
         helpmenuaction = help_menu.addAction('Help')
         helpmenuaction.triggered.connect(self.show_help_window)
 
-        self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
-        self.setGeometry(50, 50, 1000, 800)  # Set the window size to 1000x800 pixels
+        if len(saved_assignments) == 0:
+            self.output_terminal.appendPlainText("No save file")
+        else:
+            self.output_terminal.appendPlainText("Loaded save file")
 
-        # Create a QLabel to display the video feed
+
+        # Open the video source
+        self.capture = cv2.VideoCapture(0)
+        # Initialize ID marker  attribute
+        self.IDmarker = 0
+        # Start the video playback
+        self.play()
+        # Timer to detect changes after 2 seconds
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.timer_timeout)
+        self.timer.start(1000)  # 1000 = 1 seconds
+        #self.statuscheck()
+
+    def play(self):
+
+        whT = 320
+        # Read the next video frame
+        ret, frame = self.capture.read()
+
+        if ret:
+            # Convert the frame to RGB format
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # Create a QImage from the resized frame
+            image = QImage(
+                frame_rgb.data, #RGB image values
+                frame_rgb.shape[1], #Width
+                frame_rgb.shape[0], #Height
+                QImage.Format_RGB888
+            )
+            #Center frame pixel
+            fX=int(frame_rgb.shape[1]/2)
+            fY=int(frame_rgb.shape[0]/2)
+            cv2.circle(frame_rgb, (fX,fY), 3, (255, 0, 0), -1)
+            cv2.putText(frame_rgb," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+           
+
+            #Object Detect
+            if mode == 2:
+                #AR marker
+                corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
+                aruco_display(corners, ids, rejected, frame_rgb, self)
+
+                blob = cv2.dnn.blobFromImage(frame_rgb, 1/255, (whT,whT), [0,0,0], 1, crop=False)
+                net.setInput(blob)
+                layerNames = net.getLayerNames()
+                outputNames = [layerNames[i - 1] for i in net.getUnconnectedOutLayers()]
+                outputs = net.forward(outputNames)
+                self.ResetPos()
+                findObjects(outputs, frame_rgb)
+            
+            #Update Motor values
+            try:
+                pass
+                #motor_ids = [0,1,2,3,4]
+                #angles = #motor.dxlPresAngle(#motor_ids)
+                #self.motor1.setText(str(angles[0]))
+                #self.motor2.setText(str(angles[1]))
+                #self.motor3.setText(str(angles[2]))
+                #self.motor4.setText(str(angles[3]))
+                #self.motor5.setText(str(angles[4]))
+            except:
+                self.motor1.setText("")
+                self.motor2.setText("")
+                self.motor3.setText("")
+                self.motor4.setText("")
+                self.motor5.setText("")
+
+            #Testing team: AR marker tracking
+            if mode == 1:
+                #AR marker
+                corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
+                aruco_display(corners, ids, rejected, frame_rgb, self)
+                
+                # if self.IDmarker == str(self.ar_list.currentText()):
+                #     if(abs(objX - frameX) > 30):
+                #         difference = objX - frameX
+                #         print('x difference: ' + str(difference))
+                #         #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
+                #         #print("current: " + str(current))
+                #         if (difference < 10 and ids is not None):
+                #             #motor.WriteMotorData(1, 116, current - 10)
+                #             #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
+                #             #motor.dxlSetVelo([37],[1])
+                #             #motor.#motorRunWithInputs([current - difference/20], [1])
+                #             pass
+    
+                #         elif (difference > 10 and ids is not None):
+                #             #motor.dxlSetVelo([37],[1])
+                #             #motor.#motorRunWithInputs([current - difference/20], [1])
+                #             pass
+                #         self.output_terminal.appendPlainText("Tracking ")
+                #         self.output_terminal.insertPlainText(str(self.IDmarker))
+
+            # Create a QPixmap from the QImage
+            pixmap = QPixmap.fromImage(image)
+
+            # Set the QPixmap as the image in the QLabel
+            self.video_label.setPixmap(pixmap)
+            self.video_label.setScaledContents(True)
+
+        # Call the play method again after 15 milliseconds (change the delay as needed)
+        QTimer.singleShot(15, self.play)
+
+    def show_help_window(self, checked):
+        if self.GUI is None:
+            self.GUI = HelpWindow()
+        self.GUI.show()
+
+    def markIDselect(self):
+        text = str(self.ar_list.currentText())
+
+    def refresh_list(self):
+        # Clear the QComboBox and add items from AR_numbers
+        self.ar_list.clear()
+        self.ar_list.addItem("")
+        for item in AR_numbers:
+            self.ar_list.addItem(str(item["id"]))
+            print(item["id"])
+
+    def statetext(self):
+        global state
+        self.activity_status.setText(state)
+        if state == "running..":
+            self.activity_status.setStyleSheet("""
+                QPushButton {
+                    background-color: #e0ebff;
+                    border-style: outset;
+                    border-width: 2px;
+                    border-radius: 10px;
+                    border-color: black;
+                    padding: 6px;
+                }
+            """)
+        elif state == "error":
+            self.activity_status.setStyleSheet("""
+                QPushButton {
+                    background-color: #ff4d4d;
+                    border-style: outset;
+                    border-width: 2px;
+                    border-radius: 10px;
+                    border-color: black;
+                    padding: 6px;
+                }
+            """)
+        elif state == "stationary":
+            self.activity_status.setStyleSheet("""
+                QPushButton{
+                    background-color: #fffaef;
+                    border-style: outset;
+                    border-width: 2px;
+			        border-radius: 10px;
+			        border-color: black;
+                    padding: 6px;
+                }
+            """)
+        else:
+            self.activity_status.setStyleSheet("""
+                QPushButton {
+                    background-color: #fffaef;
+                    border-style: outset;
+                    border-width: 2px;
+                    border-radius: 10px;
+                    border-color: black;
+                    padding: 6px;
+                }
+            """)
+
+    def timer_timeout(self):
+        global state
+        # When the timer times out (after 2 seconds of no changes), automatically apply the input text
+        state = "stationary"
+        self.statetext()
+
+    def Input_Coord(self):
+        # This method will be called when the button is clicked
+        # It reads the text from the text boxes
+        X_inp = self.textbox1.text()
+        Y_inp = self.textbox2.text()
+        Z_inp = self.textbox3.text()
+
+        # Output terminal XYZ input
+        if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
+            self.output_terminal.appendPlainText("X: ")
+            self.output_terminal.insertPlainText(str(X_inp))
+            self.output_terminal.appendPlainText("Y: ")
+            self.output_terminal.insertPlainText(str(Y_inp))
+            self.output_terminal.appendPlainText("Z: ")
+            self.output_terminal.insertPlainText(str(Z_inp))
+
+        #From robotic arm code
+            forearm_mode = 0
+            #motor.#motorRunWithInputs([180], [0])
+
+            coor = [X_inp,Y_inp,Z_inp]
+            #angles = calculation.angle_Calc(coor, forearm_mode)
+            
+            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
+            #motor.simMotorRun(angles, MOVE_IDs)
+
+
+            # Clear the text boxes
+            self.textbox1.clear()
+            self.textbox2.clear()
+            self.textbox3.clear()
+        else:
+            no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
+            QMessageBox.Retry)
+
+
+    def Display(self):
+        # Access flags
+        global AR_flag
+        global Obj_flag
+
+        # Create a QMessageBox
+        message_box = QMessageBox()
+        message_box.setWindowTitle("Display Toggle")
+        message_box.setText("Choose an option:")
+
+        # Add buttons in the desired order
+        ar_marker_button = message_box.addButton("AR Marker border", QMessageBox.AcceptRole)
+        obj_detect_button = message_box.addButton("Toy border", QMessageBox.DestructiveRole)
+        cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
+
+        # Execute the message box
+        message_box.exec_()
+
+        # Get the role of the clicked button
+        clicked_button = message_box.buttonRole(message_box.clickedButton())
+
+        # Handle the clicked button
+        if clicked_button == QMessageBox.AcceptRole:
+            # Handle AR Marker option
+            if AR_flag == 1:
+                self.output_terminal.appendPlainText("AR Marker: OFF")
+                AR_flag = 0
+            else:
+                self.output_terminal.appendPlainText("AR Marker: ON")
+                AR_flag = 1
+        elif clicked_button == QMessageBox.DestructiveRole:
+            # Handle Object Detect option
+            if Obj_flag == 1:
+                self.output_terminal.appendPlainText("Object Detect: OFF")
+                Obj_flag = 0
+            else:
+                self.output_terminal.appendPlainText("Object Detect: ON")
+                Obj_flag = 1
+        elif clicked_button == QMessageBox.RejectRole:
+            # Handle Cancel option
+            pass
+        else:
+            self.output_terminal.appendPlainText("Unknown button clicked")
+    
+    def Mode(self):
+            global mode
+            global AR_flag
+            # Create a QMessageBox
+            message_box = QMessageBox()
+            message_box.setWindowTitle("Toggle Arm mode")
+            message_box.setText("Choose an option:")
+
+            # Add buttons in the desired order
+            tracking_button = message_box.addButton("AR marker tracking", QMessageBox.AcceptRole)
+            TBD_button = message_box.addButton("Auto Sort", QMessageBox.DestructiveRole)
+            cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
+
+            # Execute the message box
+            message_box.exec_()
+
+            # Get the role of the clicked button
+            clicked_button_role = message_box.buttonRole(message_box.clickedButton())
+
+            # Handle the clicked button
+            if clicked_button_role == QMessageBox.AcceptRole:
+                # Handle AR marker tracking
+                if mode == 1:
+                    self.output_terminal.appendPlainText("AR marker tracking: OFF")
+                    mode = 0
+                else:
+                    self.output_terminal.appendPlainText("AR Marker tracking: ON")
+                    if AR_flag == 0:
+                        AR_flag = 1
+                        self.output_terminal.appendPlainText("AR marker: ON")
+                    mode = 1
+            elif clicked_button_role == QMessageBox.DestructiveRole:
+                # Handle Object Detect option
+                if mode == 2:
+                    self.output_terminal.appendPlainText("Auto Sorting: OFF")
+                    mode = 0
+                else:
+                    self.output_terminal.appendPlainText("Auto Sorting: ON")
+                    mode = 2
+            elif clicked_button_role == QMessageBox.RejectRole:
+                # Handle Cancel option
+                pass
+            else:
+                self.output_terminal.appendPlainText("Unknown button clicked")
+    
+    def ResetPos(self):
+        self.output_terminal.appendPlainText("Moving to default position")
+        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
+        #motor.#motorRunWithInputs([180], [4])
+        #motor.#motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
+
+    def closeEvent(self, event):
+        # Release the video source when the window is closed
+        reply = QMessageBox.question(self, 'Quit', 'Are you sure you want to quit?',
+        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            if self.capture.isOpened():
+                self.capture.release()
+            save_data(saved_assignments)
+            self.output_terminal.appendPlainText("Data Saved")
+            event.accept()
+        else:
+            event.ignore()
+    def statuscheck(self):
+        print("Checking motors")
+
+        global state
+        state = None
+
+        # if motor.motor_status == 0:
+        #     state = 'stationary..'
+
+        # elif motor.motor_status == 1:
+        #     state = 'running..'
+
+        # else:
+        #     state = 'error'
+            
+        QTimer.singleShot(15, self.statuscheck)
+    def open_object_list(self):
+        self.ar_select = self.ar_list.currentText()
+        if self.ar_select == "":
+            self.output_terminal.appendPlainText("No AR marker selected ")
+            return
+        # Create the second window and get the selected item
+        new_window = ObjectChoices(classNames)
+        if new_window.exec_() == QDialog.Accepted:
+            self.object_selected = new_window.selected_item
+            # Now you can call your method to handle the saved selections
+            if self.object_selected in classNames:
+                self.output_terminal.appendPlainText(f"[Object: {self.object_selected}] assigned to [Marker: {self.ar_select}]")
+                self.save_selection()
+            else:
+                self.object_selected = ""
+                self.output_terminal.appendPlainText("No selection")
+    def save_selection(self):
+        selected_data = {"Obj": self.object_selected, "AR": self.ar_list.currentText()}
+        for item in saved_assignments:
+            if self.object_selected == item.get("Obj"):
+                item["AR"] = self.ar_list.currentText()
+                return
+
+        saved_assignments.append(selected_data)   
+    def layout_init(self):
+                # Create a QLabel to display the video feed
         self.video_label = QLabel(self)
         self.video_label.setAlignment(Qt.AlignCenter)
 
@@ -442,9 +893,18 @@ class ControllerGUI(QWidget):
         self.R_button.setFixedWidth(200)
         self.R_button.clicked.connect(self.ResetPos)
 
+        self.showSaves = CustomButton("Show Saved Selections")
+        self.showSaves.setFixedWidth(200)
+        self.showSaves.clicked.connect(self.saved_List)
+
         self.activity_status = QPushButton(self)
         self.activity_status.setStyleSheet("border: 1px solid black;")
         self.activity_status.setText(state)
+        self.statetext()
+
+        self.Scan_button = CustomButton("Scan and calibrate AR baskets")
+        self.Scan_button.setFixedWidth(200)
+        self.Scan_button.clicked.connect(self.scan_calibrate_AR_baskets)
 
         self.Disp_button = CustomButton("Display")
         self.Disp_button.setFixedWidth(200)
@@ -466,7 +926,7 @@ class ControllerGUI(QWidget):
         toggle_up.setIcon(QIcon("uparrow.png"))
         up = QKeySequence(Qt.Key_Up)
         toggle_up.setShortcut(up)
-        toggle_up.clicked.connect(lambda: ArrowMov(0))
+        toggle_up.clicked.connect(lambda: ArrowMov(0,self))
         #down
         toggle_down = ToggleButton("",self)
         toggle_down.setFixedWidth(50)
@@ -474,7 +934,7 @@ class ControllerGUI(QWidget):
         toggle_down.setIcon(QIcon("downarrow.png"))
         down = QKeySequence(Qt.Key_Down)
         toggle_down.setShortcut(down)
-        toggle_down.clicked.connect(lambda: ArrowMov(2))
+        toggle_down.clicked.connect(lambda: ArrowMov(2,self))
         #right
         toggle_right = ToggleButton("",self)
         toggle_right.setFixedWidth(50)
@@ -482,7 +942,7 @@ class ControllerGUI(QWidget):
         right = QKeySequence(Qt.Key_Right)
         toggle_right.setShortcut(right)
         toggle_right.setIcon(QIcon("rightarrow.png"))
-        toggle_right.clicked.connect(lambda: ArrowMov(1))
+        toggle_right.clicked.connect(lambda: ArrowMov(1,self))
         #left
         toggle_left = ToggleButton("",self)
         toggle_left.setFixedWidth(50)
@@ -490,7 +950,7 @@ class ControllerGUI(QWidget):
         toggle_left.setIcon(QIcon("leftarrow.png"))
         left = QKeySequence(Qt.Key_Left)
         toggle_left.setShortcut(left)
-        toggle_left.clicked.connect(lambda: ArrowMov(3))
+        toggle_left.clicked.connect(lambda: ArrowMov(3,self))
 
         # Set focus policy to capture arrow keys
         toggle_up.setFocusPolicy(Qt.StrongFocus)
@@ -508,12 +968,11 @@ class ControllerGUI(QWidget):
         #list of detected AR markers
         self.ar_list = QComboBox(self)
         self.ar_list.currentTextChanged.connect(self.markIDselect)
-
-
-        self.reset_list_button = QPushButton("Reset Detected List", self)
-        self.reset_list_button.clicked.connect(self.reset_list)
-
-        label5 = QLabel()
+        self.refresh_list_button = QPushButton("Refresh Deteced AR IDs", self)
+        self.refresh_list_button.clicked.connect(self.refresh_list)
+        label5 = QLabel("Detected Items")
+        self.AssignMarker_button = QPushButton("Assign ID to object", self)
+        self.AssignMarker_button.clicked.connect(self.open_object_list)
 
         # Create a QHBoxLayout for each label and textbox pair
         layout1 = QHBoxLayout()
@@ -617,6 +1076,7 @@ class ControllerGUI(QWidget):
         R_v_layout.addLayout(mot3)
         R_v_layout.addLayout(mot4)
         R_v_layout.addLayout(mot5)
+        R_v_layout.addWidget(self.Scan_button)
         R_v_layout.addWidget(self.Disp_button)
         R_v_layout.addWidget(self.Mode_button)
         R_v_layout.addLayout(layout1)
@@ -633,11 +1093,13 @@ class ControllerGUI(QWidget):
         L_v_layout.addWidget(self.Stop_button)
         L_v_layout.addWidget(self.R_button)
         L_v_layout.addWidget(self.activity_status)
-        L_v_layout.addWidget(self.reset_list_button)
+        L_v_layout.addWidget(self.refresh_list_button)
         L_v_layout.addWidget(label5)
         L_v_layout.addWidget(self.ar_list)
+        L_v_layout.addWidget(self.AssignMarker_button)
+        L_v_layout.addWidget(self.showSaves)
         L_v_layout.addWidget(self.ROBOTIS)
-
+        
         # Middle layout
         mid_layout = QVBoxLayout()
         mid_layout.setSpacing(10)  # Set the spacing between items to 10 pixels
@@ -657,278 +1119,95 @@ class ControllerGUI(QWidget):
         # Align the final layout to the left
         final_layout.setAlignment(Qt.AlignLeft)
 
-        # Set the main layout for the widget
+        #Assign layout to show
         self.setLayout(final_layout)
+    def saved_List(self):
+        try:
+            if len(saved_assignments) == 0:
+                self.output_terminal.appendPlainText("No saved selections")
+                return
+            self.output_terminal.appendPlainText("From save file:")
+            for item in saved_assignments:
+                self.output_terminal.appendPlainText(str(item))
+        except:
+            self.output_terminal.appendPlainText("No saved selections")
+    def scan_calibrate_AR_baskets(self):
+        try:
+            #360 arm movment to view surroundings
+            #...
+            aruco_display()
 
-        # Open the video source
-        self.capture = cv2.VideoCapture(0)
-        # Initialize ID marker  attribute
-        self.IDmarker = 0
-        # Start the video playback
-        self.play()
+            for item in AR_numbers:
+                #Move to last seen coordinate of AR marker with saved motor angles
+                #motor.motorRunWithInputs([item["motor0"],item["motor1"],item["motor2"],item["motor3"],item["motor4"]], [0,1,2,3,4])
 
-    def show_help_window(self, checked):
-        if self.GUI is None:
-            self.GUI = HelpWindow()
-        self.GUI.show()
+                #Starting from this position move to object drop into AR basket position
+                #...
 
-    def play(self):
-        whT = 320
-        # Read the next video frame
-        ret, frame = self.capture.read()
+                #At ideal drop position, update affiliated motor angles
+                motor_ids = [0, 1, 2, 3, 4]
+                angles = motor.dxlPresAngle(motor_ids)
+                item["motor0"] = angles[0]
+                item["motor1"] = angles[1]
+                item["motor2"] = angles[2]
+                item["motor3"] = angles[3]
+                item["motor4"] = angles[4]
+        except:
+            self.output_terminal.appendPlainText("Unable to scan surroundings. Error")
+class ObjectChoices(QDialog):
+    def __init__(self, classNames, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Toy List")
+        self.selected_item = None
 
-        if ret:
-            # Convert the frame to RGB format
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Create a QListWidget to show the updating list
+        self.list_widget = QListWidget()
+        self.list_widget.addItem("")
+        # All object list
+        self.knownList = QComboBox(self)
+        self.knownList.addItem("")
+        for item in classNames:
+            self.knownList.addItem(item)
 
-            # Create a QImage from the resized frame
-            image = QImage(
-                frame_rgb.data, #RGB image values
-                frame_rgb.shape[1], #Width
-                frame_rgb.shape[0], #Height
-                QImage.Format_RGB888
-            )
-            #Center frame pixel
-            fX=int(frame_rgb.shape[1]/2)
-            fY=int(frame_rgb.shape[0]/2)
-            cv2.circle(frame_rgb, (fX,fY), 3, (255, 0, 0), -1)
-            cv2.putText(frame_rgb," (" + str(fX) + " , " + str(fY) + ")", (fX,fY), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-           
-
-            #Object Detect
-            if Obj_flag ==1:
-                blob = cv2.dnn.blobFromImage(frame_rgb, 1/255, (whT,whT), [0,0,0], 1, crop=False)
-                net.setInput(blob)
-                layerNames = net.getLayerNames()
-                outputNames = [layerNames[i - 1] for i in net.getUnconnectedOutLayers()]
-                outputs = net.forward(outputNames)
-                findObjects(outputs, frame_rgb)
-            #Aruco detect
-            if AR_flag == 1:
-                corners, ids, rejected = cv2.aruco.detectMarkers(frame_rgb, arucoDict, parameters=arucoParams)
-                aruco_display(corners, ids, rejected, frame_rgb, self)
-            
-            #Update Motor values
-            try:
-                pass
-                #motor_ids = [0,1,2,3,4]
-                #angles = #motor.dxlPresAngle(#motor_ids)
-                #self.motor1.setText(str(angles[0]))
-                #self.motor2.setText(str(angles[1]))
-                #self.motor3.setText(str(angles[2]))
-                #self.motor4.setText(str(angles[3]))
-                #self.motor5.setText(str(angles[4]))
-            except:
-                self.motor1.setText("")
-                self.motor2.setText("")
-                self.motor3.setText("")
-                self.motor4.setText("")
-                self.motor5.setText("")
-
-            #Testing team: AR marker tracking
-            if mode == 1:
-                if self.IDmarker == str(self.ar_list.currentText()):
-                    if(abs(objX - frameX) > 30):
-                        difference = objX - frameX
-                        print('x difference: ' + str(difference))
-                        #current = motor._map(#motor.ReadMotorData(1, 132), 0, 4095, 0, 360)
-                        #print("current: " + str(current))
-                        if (difference < 10 and ids is not None):
-                            #motor.WriteMotorData(1, 116, current - 10)
-                            #motor.#motor_check(1,#motor._map(current - 10 , 0, 360, 0, 4095))
-                            #motor.dxlSetVelo([37],[1])
-                            #motor.#motorRunWithInputs([current - difference/20], [1])
-                            pass
-    
-                        elif (difference > 10 and ids is not None):
-                            #motor.dxlSetVelo([37],[1])
-                            #motor.#motorRunWithInputs([current - difference/20], [1])
-                            pass
-                        self.output_terminal.appendPlainText("Tracking ")
-                        self.output_terminal.insertPlainText(str(self.IDmarker))
-
-            # Create a QPixmap from the QImage
-            pixmap = QPixmap.fromImage(image)
-
-            # Set the QPixmap as the image in the QLabel
-            self.video_label.setPixmap(pixmap)
-            self.video_label.setScaledContents(True)
-
-        # Call the play method again after 15 milliseconds (change the delay as needed)
-        QTimer.singleShot(15, self.play)
-
-    def markIDselect(self):
-        text = str(self.ar_list.currentText())
-
-
-    def reset_list(self):
-        self.ar_list.clear()
-        self.ar_list.addItem("STOP TRACKING")
-        for x in numbers:
-            self.ar_list.addItem(str(x))
-        numbers.clear()
-
-
-
-    def Input_Coord(self):
-        # This method will be called when the button is clicked
-        # It reads the text from the text boxes
-        X_inp = self.textbox1.text()
-        Y_inp = self.textbox2.text()
-        Z_inp = self.textbox3.text()
-
-        # Output terminal XYZ input
-        if self.textbox1.text() and self.textbox2.text() and self.textbox3.text():
-            self.output_terminal.appendPlainText("X: ")
-            self.output_terminal.insertPlainText(str(X_inp))
-            self.output_terminal.appendPlainText("Y: ")
-            self.output_terminal.insertPlainText(str(Y_inp))
-            self.output_terminal.appendPlainText("Z: ")
-            self.output_terminal.insertPlainText(str(Z_inp))
-
-        #From robotic arm code
-            forearm_mode = 0
-            #motor.#motorRunWithInputs([180], [0])
-
-            coor = [X_inp,Y_inp,Z_inp]
-            #angles = calculation.angle_Calc(coor, forearm_mode)
-            
-            #motor.dxlSetVelo([30,18,30,30,30], ALL_IDs)
-            #motor.simMotorRun(angles, MOVE_IDs)
-
-
-            # Clear the text boxes
-            self.textbox1.clear()
-            self.textbox2.clear()
-            self.textbox3.clear()
-        else:
-            no_input = QMessageBox.critical(self, 'No Input', 'One or more of the coordinates are missing inputs. Please enter a coordin',
-            QMessageBox.Retry)
-
-
-    def Display(self):
-        # Access flags
-        global AR_flag
-        global Obj_flag
-
-        # Create a QMessageBox
-        message_box = QMessageBox()
-        message_box.setWindowTitle("Display Toggle")
-        message_box.setText("Choose an option:")
-
-        # Add buttons in the desired order
-        ar_marker_button = message_box.addButton("AR Marker", QMessageBox.AcceptRole)
-        obj_detect_button = message_box.addButton("Object Detect", QMessageBox.DestructiveRole)
-        cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
-
-        # Execute the message box
-        message_box.exec_()
-
-        # Get the role of the clicked button
-        clicked_button_role = message_box.buttonRole(message_box.clickedButton())
-
-        # Handle the clicked button
-        if clicked_button_role == QMessageBox.AcceptRole:
-            # Handle AR Marker option
-            if AR_flag == 1:
-                self.output_terminal.appendPlainText("AR Marker: OFF")
-                AR_flag = 0
-            else:
-                self.output_terminal.appendPlainText("AR Marker: ON")
-                AR_flag = 1
-        elif clicked_button_role == QMessageBox.DestructiveRole:
-            # Handle Object Detect option
-            if Obj_flag == 1:
-                self.output_terminal.appendPlainText("Object Detect: OFF")
-                Obj_flag = 0
-            else:
-                self.output_terminal.appendPlainText("Object Detect: ON")
-                Obj_flag = 1
-        elif clicked_button_role == QMessageBox.RejectRole:
-            # Handle Cancel option
+        # Fill detected objects list (I assume you have the 'objects' variable defined somewhere else)
+        try:
+            for item in objects:
+                self.list_widget.addItem(item)
+        except:
             pass
-        else:
-            self.output_terminal.appendPlainText("Unknown button clicked")
-    
-    def Mode(self):
-            global mode
-            global AR_flag
-            # Create a QMessageBox
-            message_box = QMessageBox()
-            message_box.setWindowTitle("Toggle Arm mode")
-            message_box.setText("Choose an option:")
 
-            # Add buttons in the desired order
-            tracking_button = message_box.addButton("AR marker tracking", QMessageBox.AcceptRole)
-            TBD_button = message_box.addButton("TBD", QMessageBox.DestructiveRole)
-            cancel_button = message_box.addButton("Cancel", QMessageBox.RejectRole)
+        # Create a QPushButton to confirm the selection
+        self.confirm_button = QPushButton("Confirm")
 
-            # Execute the message box
-            message_box.exec_()
+        self.knownLabel = QLabel("All Known Objects")
 
-            # Get the role of the clicked button
-            clicked_button_role = message_box.buttonRole(message_box.clickedButton())
+        # Connect the button's clicked signal to a method
+        self.confirm_button.clicked.connect(self.confirm_OBJ)
 
-            # Handle the clicked button
-            if clicked_button_role == QMessageBox.AcceptRole:
-                # Handle AR marker tracking
-                if mode == 1:
-                    self.output_terminal.appendPlainText("AR marker tracking: OFF")
-                    mode = 0
-                else:
-                    self.output_terminal.appendPlainText("AR Marker tracking: ON")
-                    if AR_flag == 0:
-                        AR_flag = 1
-                        self.output_terminal.appendPlainText("AR marker: ON")
-                    mode = 1
-            elif clicked_button_role == QMessageBox.DestructiveRole:
-                # Handle Object Detect option
-                if mode == 2:
-                    self.output_terminal.appendPlainText("Nothing happened")
-                    mode = 0
-                else:
-                    self.output_terminal.appendPlainText(".")
-                    mode = 2
-            elif clicked_button_role == QMessageBox.RejectRole:
-                # Handle Cancel option
-                pass
+        # Layout setup
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("Detected Objects:"))
+        layout.addWidget(self.list_widget)
+        layout.addWidget(self.knownLabel)
+        layout.addWidget(self.knownList)
+        layout.addWidget(self.confirm_button)
+        self.setLayout(layout)
+
+    def confirm_OBJ(self):
+        # Get the selected item from the QListWidget
+        try:
+            if self.knownList.currentText() in classNames:
+                self.selected_item = self.knownList.currentText()
+
             else:
-                self.output_terminal.appendPlainText("Unknown button clicked")
-    
-    def ResetPos(self):
-        self.output_terminal.appendPlainText("Moving to default position")
-        #motor.dxlSetVelo([20, 20, 20, 20, 20], [0, 1, 2, 3, 4])
-        #motor.#motorRunWithInputs([180], [4])
-        #motor.#motorRunWithInputs([90, 227, 273, 47], [0, 1, 2, 3])
-
-    def closeEvent(self, event):
-        # Release the video source when the window is closed
-        reply = QMessageBox.question(self, 'Quit', 'Are you sure you want to quit?',
-        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.Yes:
-            if self.capture.isOpened():
-                self.capture.release()
-            event.accept()
-        else:
-            event.ignore()
-    def statuscheck(self):
-
-        global state
-        state = None
-
-        # if motor.motor_status == 0:
-        #     state = 'stationary..'
-
-        # elif motor.motor_status == 1:
-        #     state = 'running..'
-
-        # else:
-        #     state = 'error'
-            
-        QTimer.singleShot(15, self.statuscheck)
-
+                self.selected_item = self.list_widget.currentItem().text()
+            self.accept()
+        except:
+            self.selected_item == " "
+            print("0:Error with object select menu")
 
 def main():
+
     # Create the QApplication
     app = QApplication([])
 
