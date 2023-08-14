@@ -4,8 +4,8 @@ import os
 #import #motorctrl_v1 as #motor
 #import Movement_Calc_v2 as calculation
 from PyQt5.QtCore import Qt, QTimer, QRect
-from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon,QKeySequence, QKeyEvent
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QComboBox
+from PyQt5.QtGui import QImage, QPixmap, QFont, QIcon, QKeySequence, QKeyEvent
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QPushButton, QLineEdit, QHBoxLayout, QPlainTextEdit, QMessageBox, QGridLayout, QSizePolicy, QComboBox, QMenuBar, QTabWidget, QListWidget, QTableWidget, QFrame, QHeaderView, QColumnView, QAbstractItemView, QTableWidgetItem
 
 #Filepath for images and obj_detect setup
 os.chdir(r'cv2\GUI\icons')
@@ -300,9 +300,106 @@ def ArrowMov(direction):
     else:
         print("Invalid direction:", direction)
 
+class HelpWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setFixedSize(800, 500)
+        self.setWindowTitle("Help")
+
+        tab_widget = QTabWidget()
+
+        buttonsfunctiontab = QWidget()
+        buttons_layout = QVBoxLayout()
+
+        #change properties of qtablewidget
+        help_box = QTableWidget()
+        buttons_layout.addWidget(help_box)
+        help_box.setRowCount(11)
+        help_box.setColumnCount(2)
+        help_box.setEditTriggers(QTableWidget.NoEditTriggers)
+        help_box.setAlternatingRowColors(True)
+        help_box.setFrameStyle(QFrame.NoFrame)
+        help_box.horizontalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        help_box.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+        help_box.horizontalHeader().hide()
+        help_box.verticalHeader().hide()
+        help_box.setShowGrid(False)
+        help_box.setSelectionMode(QAbstractItemView.NoSelection)
+        help_box.setFocusPolicy(Qt.NoFocus)
+        help_box.setFont(QFont("Courier New", 8))
+        help_box.setColumnWidth(1, 600)
+        help_box.setColumnWidth(0, 200)
+        help_box.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        help_box.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+
+        #add items to qtablewidget
+        #force stop
+        help_box.setItem(0,0,QTableWidgetItem('Force Stop'))
+        help_box.setItem(0,1,QTableWidgetItem('Stop the robot arm in its current position'))
+        help_box.setRowHeight(0, 8)
+        #reset
+        help_box.setItem(1,0,QTableWidgetItem('Reset'))
+        help_box.setItem(1,1,QTableWidgetItem('Reset the robot arm to its starting position'))
+        help_box.setRowHeight(1, 8)
+        #reset detected list
+        help_box.setItem(2,0,QTableWidgetItem('Reset Detected List'))
+        help_box.setItem(2,1,QTableWidgetItem('Reset the list that displays the AR markers being detected with the webcam'))
+        help_box.setRowHeight(2, 8)
+        #detected list 
+        help_box.setItem(3,0,QTableWidgetItem('Detected List'))
+        help_box.setItem(3,1,QTableWidgetItem('Select the AR marker you would like to track'))
+        help_box.setRowHeight(3, 8)
+        #display
+        help_box.setItem(4,0,QTableWidgetItem('Display'))
+        help_box.setItem(4,1,QTableWidgetItem('Choose between camera detected modes'))
+        help_box.setRowHeight(4, 8)
+        #ar marker
+        help_box.setItem(5,0,QTableWidgetItem('AR Marker'))
+        help_box.setItem(5,1,QTableWidgetItem('Display the detected AR markers shown on the webcam'))
+        help_box.setRowHeight(5, 8)
+        #object detect
+        help_box.setItem(6,0,QTableWidgetItem('Object Detect'))
+        help_box.setItem(6,1,QTableWidgetItem('Display the detected objects shown on the webcam'))
+        help_box.setRowHeight(6, 8)
+        #mode 
+        help_box.setItem(7,0,QTableWidgetItem('Mode'))
+        help_box.setItem(7,1,QTableWidgetItem('Switch between AR marker tracking modes and manual movement modes'))
+        help_box.setRowHeight(7, 8)
+        #xyz inputs
+        help_box.setItem(8,0,QTableWidgetItem('XYZ Inputs'))
+        help_box.setItem(8,1,QTableWidgetItem('Input coordinates for the robot arm'))
+        help_box.setRowHeight(8, 8)
+        #input coordinates 
+        help_box.setItem(9,0,QTableWidgetItem('Input Coordinates'))
+        help_box.setItem(9,1,QTableWidgetItem('Enters the inputted coordinates to move the robot arm'))
+        help_box.setRowHeight(9, 8)
+        #arrows
+        help_box.setItem(10,0,QTableWidgetItem('Arrows'))
+        help_box.setItem(10,1,QTableWidgetItem('Manually move the robot arm (CANNOT BE USED WHILE IN TRACKING MODE)'))
+        help_box.setRowHeight(10, 8)
+
+        buttonsfunctiontab.setLayout(buttons_layout)
+        
+        tab_widget.addTab(buttonsfunctiontab, "Button Functions")
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(tab_widget)
+
+
+        self.setLayout(main_layout)
+
 class ControllerGUI(QWidget):
     def __init__(self):
         super().__init__()
+
+        self.GUI = None  
+
+        #menubar
+        menubar = QMenuBar(self)
+        help_menu = menubar.addMenu('Help')
+        helpmenuaction = help_menu.addAction('Help')
+        helpmenuaction.triggered.connect(self.show_help_window)
+
         self.setWindowTitle("ROBOTIS OpenManipulatorX Controller")
         self.setGeometry(50, 50, 1000, 800)  # Set the window size to 1000x800 pixels
 
@@ -569,6 +666,11 @@ class ControllerGUI(QWidget):
         self.IDmarker = 0
         # Start the video playback
         self.play()
+
+    def show_help_window(self, checked):
+        if self.GUI is None:
+            self.GUI = HelpWindow()
+        self.GUI.show()
 
     def play(self):
         whT = 320
