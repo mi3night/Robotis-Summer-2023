@@ -574,7 +574,6 @@ class ControllerGUI(QWidget):
             
             #Update Motor values
             try:
-                pass
                 motor_ids = [0,1,2,3,4]
                 angles = motor.dxlPresAngle(motor_ids)
                 self.motor1.setText(str(angles[0]))
